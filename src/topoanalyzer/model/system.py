@@ -28,8 +28,13 @@ class System:
             report.add_error("router graph is not connected")
 
         routers = [node.id for node in self.graph.routers()]
+        destination_routers = _destination_router_ids(self.graph)
+        unknown_destination_routers = sorted(set(destination_routers) - set(routers))
+        for router in unknown_destination_routers:
+            report.add_error("terminal attachment references unknown router", router=router)
+
         for src in routers:
-            for dst in routers:
+            for dst in destination_routers:
                 if src == dst:
                     continue
                 path = self.routing_table.paths.get((src, dst))
@@ -68,3 +73,17 @@ class System:
             "routing_table": self.routing_table.to_dict(),
             "metadata": dict(self.metadata),
         }
+
+
+def _destination_router_ids(graph: TopologyGraph) -> list[str]:
+    attachments = graph.metadata.get("terminal_attachments")
+    if isinstance(attachments, list) and attachments:
+        routers = []
+        for attachment in attachments:
+            if not isinstance(attachment, dict):
+                continue
+            count = int(attachment.get("count", 0))
+            if count > 0:
+                routers.append(str(attachment["router_id"]))
+        return sorted(set(routers))
+    return [node.id for node in graph.routers()]

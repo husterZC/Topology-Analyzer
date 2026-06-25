@@ -76,6 +76,189 @@ Weakness:
 - routes can be longer than shortest paths,
 - traffic can concentrate near the root.
 
+### `fattree_lca`
+
+Topology-specific least-common-ancestor routing for `fattree`.
+
+```yaml
+routing:
+  type: fattree_lca
+```
+
+Behavior:
+
+1. Use Fat-tree link metadata to separate upward and downward channels.
+2. Route from the current router upward to a nearest common ancestor.
+3. Route downward to the destination leaf router.
+4. Never route upward after taking a downward hop.
+5. Assign all routes to VC `0`.
+
+Fat-tree systems attach terminals only to leaf routers. Therefore
+`fattree_lca` emits routes from every router to every terminal-attached leaf
+router, not routes to every internal/root router. This matches BookSim terminal
+destinations and avoids unnecessary root-to-root routes.
+
+Use this when:
+
+- the topology is `fattree`,
+- you want a deterministic but intentionally simple topology-specific baseline,
+- you want levels greater than 3 without relying on a root-oriented spanning tree.
+
+Important limitation:
+
+- equal-cost upward choices are resolved by router ordering, so this route can
+  concentrate traffic badly in large Fat-trees. Prefer `fattree_nca_hash` for
+  benchmark comparisons unless you explicitly want this baseline.
+
+### `fattree_nca_hash`
+
+Topology-specific nearest-common-ancestor routing for `fattree` with static
+hashing across equal-cost upward links.
+
+```yaml
+routing:
+  type: fattree_nca_hash
+  seed: 0
+```
+
+Fields:
+
+- `seed`: optional integer used by the stable hash. Default `0`.
+
+Behavior:
+
+1. Use Fat-tree link metadata to separate upward and downward channels.
+2. For each destination terminal, route upward until the current router can
+   reach the destination leaf with downward hops only.
+3. Select each upward equal-cost parent with a stable hash of the current
+   router, destination terminal ID, and `seed`.
+4. Route downward to the destination leaf.
+5. Never route upward after taking a downward hop.
+6. Assign all routes to VC `0`.
+
+The BookSim `anynet_table` exporter consumes the terminal-specific next-hop
+metadata emitted by this generator:
+
+```text
+routing_table.metadata["terminal_next_hops"][current_router][destination_terminal]
+```
+
+This is necessary for Fat-tree path diversity because multiple terminals can
+attach to the same leaf router. Router-to-router routes alone collapse those
+terminals onto the same path.
+
+Use this when:
+
+- the topology is `fattree`,
+- you want a balanced static routing baseline,
+- you need levels greater than 3,
+- you want a table-driven route that remains deterministic and repeatable.
+
+This is not a true adaptive routing algorithm. It does not inspect runtime
+queue occupancy or credits. For an ANCA-style experiment, add a BookSim runtime
+routing function that chooses among upward ports dynamically and use that as a
+separate backend mode.
+
+### `fattree_dmodk`
+
+Deterministic D-mod-k-style modulo routing for `fattree`.
+
+```yaml
+routing:
+  type: fattree_dmodk
+```
+
+Behavior:
+
+1. Use nearest-common-ancestor up/down routing.
+2. On each upward hop at level `l`, choose the parent with:
+
+```text
+floor(destination_terminal / split^l) mod available_parent_count
+```
+
+3. Route downward once the destination leaf can be reached with downward hops.
+4. Assign all routes to VC `0`.
+
+Use this when:
+
+- you want a deterministic static modulo baseline,
+- you want repeatable table-driven results without hashing,
+- you are comparing against ECMP-style `fattree_nca_hash`.
+
+### `fattree_dmodc`
+
+Dmodc-style availability-aware modulo routing for `fattree`.
+
+```yaml
+routing:
+  type: fattree_dmodc
+  disabled_links:
+    - ft.l0.0.0.0->ft.l1.0.0.0
+    - src: ft.l0.0.0.1
+      dst: ft.l1.0.0.1
+```
+
+Fields:
+
+- `disabled_links`: optional list of directed router links that the route table
+  must avoid. Entries can be `src->dst` strings or `{src, dst}` mappings.
+
+Behavior:
+
+1. Use nearest-common-ancestor up/down routing.
+2. Filter disabled directed links out of the routing graph.
+3. On each upward hop, choose among currently viable parents with the same
+   level-aware modulo rule as `fattree_dmodk`.
+4. Continue upward if a covering router has no viable downward path because of
+   disabled links.
+5. Fail during route generation if strict up/down routing cannot reach a
+   required terminal without a disabled link.
+
+This is a Dmodc-style baseline for the regular Fat-tree model in this repo, not
+a complete implementation of every PGFT rerouting rule from the Dmodc papers.
+It is useful for static fault-avoidance experiments where the remaining up/down
+graph is still routable.
+
+### `fattree_anca`
+
+BookSim runtime adaptive nearest-common-ancestor routing for `fattree`.
+
+```yaml
+routing:
+  type: fattree_anca
+```
+
+This routing type validates the Topology-Analyzer Fat-tree system but is not
+lowered through `anynet.routes`. To simulate true adaptive routing, use:
+
+```yaml
+booksim:
+  backend: auto
+```
+
+or:
+
+```yaml
+booksim:
+  backend: stock_fattree
+```
+
+The generated BookSim config uses:
+
+```text
+topology = fattree;
+k = radix / 2;
+n = levels;
+routing_function = anca;
+```
+
+Use this when:
+
+- you want runtime credit-aware/adaptive BookSim routing,
+- homogeneous 1-cycle links are acceptable,
+- you do not need the custom anynet table backend for this system.
+
 ### `graph_lash`
 
 LASH-style static graph routing with VC layers.

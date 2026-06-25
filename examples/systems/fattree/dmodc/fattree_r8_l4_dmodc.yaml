@@ -1,0 +1,16 @@
+name: fattree_r8_l4_dmodc
+
+topology:
+  type: fattree
+  params:
+    radix: 8
+    levels: 4
+
+links:
+  default:
+    latency_cycles: 1
+    bandwidth: 64GB/s
+
+routing:
+  type: fattree_dmodc
+  disabled_links: []

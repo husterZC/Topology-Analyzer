@@ -79,6 +79,13 @@ For `mesh2d`, supported classes are:
 - `x`: horizontal mesh links.
 - `y`: vertical mesh links.
 
+For `fattree`, supported classes are:
+
+- `up`: lower-level router to upper-level router.
+- `down`: upper-level router to lower-level router.
+- `level_<n>_up`: upward links whose lower endpoint is level `n`.
+- `level_<n>_down`: downward links whose lower endpoint is level `n`.
+
 Optional pair overrides:
 
 ```yaml
@@ -127,9 +134,27 @@ Every route path must:
 - start at its source router,
 - end at its destination router,
 - use only adjacent graph links,
-- be present for every ordered source/destination pair.
+- be present for every required ordered source/destination pair.
+
+By default, every router is treated as a possible destination. If graph metadata
+contains `terminal_attachments`, only routers with attached terminals are
+required as destinations. This is important for topologies such as Fat-tree,
+where terminals attach only to leaf routers.
 
 `route_vcs` defaults to `0` for generators that do not explicitly use VC layers.
+
+Some routing generators may add backend-specific metadata while keeping the
+canonical router-to-router routes intact. For example, Fat-tree hash routing
+emits terminal-specific next hops:
+
+```text
+routing_table.metadata["terminal_next_hops"][current_router][destination_terminal]
+  -> {"next_hop": router_id, "vc": vc}
+```
+
+The canonical `paths` table still validates router-to-router coverage. The
+BookSim `anynet_table` exporter uses `terminal_next_hops` when present so
+topologies with multiple terminals per router can preserve path diversity.
 
 ## Validation
 
@@ -137,7 +162,7 @@ Every route path must:
 
 - graph has nodes,
 - router graph is connected,
-- every router pair has a route,
+- every required router/destination pair has a route,
 - every route uses valid adjacent links,
 - the VC-aware channel dependency graph is acyclic.
 

@@ -44,8 +44,10 @@ booksim:
 
 Supported values:
 
+- `auto`: choose `stock_fattree` for `fattree_anca`, otherwise use `anynet_table`.
 - `anynet_table`: default custom backend. Emits BookSim `anynet` topology plus a generated route table.
 - `stock_mesh`: legacy compatibility backend for stock BookSim mesh experiments.
+- `stock_fattree`: native BookSim Fat-tree backend for `fattree_anca`.
 
 ## Generated Config
 
@@ -95,6 +97,22 @@ than the largest VC used by the generated routing table.
 
 `anynet_mapping.json` records the Topology-Analyzer router IDs, terminal IDs,
 link latency, and bandwidth metadata used to generate the BookSim files.
+
+If a topology graph provides `terminal_attachments` metadata, the exporter
+attaches BookSim terminals only to those routers. Fat-tree uses this so only
+leaf routers own terminals. If `terminal_attachments` is absent, the exporter
+falls back to mesh-style `concentration` terminals on every router.
+
+If a routing table provides:
+
+```text
+routing_table.metadata["terminal_next_hops"]
+```
+
+the exporter uses those terminal-specific next hops. Otherwise it falls back to
+the canonical router-to-router route table. `fattree_nca_hash` uses this path so
+different destination terminals attached to the same leaf router can still use
+different equal-cost Fat-tree paths.
 
 ## Required BookSim2 Overlay
 
@@ -171,6 +189,45 @@ latency_cycles == 1
 
 Unsupported stock cases raise a `BookSimUnsupportedError`.
 
+## Native `stock_fattree` Backend
+
+For:
+
+```yaml
+booksim:
+  backend: stock_fattree
+```
+
+or:
+
+```yaml
+booksim:
+  backend: auto
+```
+
+with `routing.type: fattree_anca`, the backend writes:
+
+```text
+topology = fattree;
+k = <radix / 2>;
+n = <levels>;
+routing_function = anca;
+```
+
+This path uses BookSim's runtime adaptive Fat-tree routing function rather than
+the static `anynet.routes` table. It currently requires:
+
+```text
+topology.type = fattree
+routing.type = fattree_anca
+homogeneous link latency
+latency_cycles == 1
+homogeneous link bandwidth metadata
+```
+
+Use `anynet_table` for `fattree_nca_hash`, `fattree_dmodk`, and
+`fattree_dmodc`.
+
 Unsupported examples:
 
 ```yaml
@@ -210,5 +267,7 @@ The default backend now covers arbitrary graph lowering, per-link latency, and
 table-driven routing. Remaining work:
 
 - true per-link bandwidth in BookSim channel behavior,
+- true adaptive routing functions that can inspect runtime credit or queue
+  state, for example ANCA-style Fat-tree routing,
 - optional directed-only links if a future topology needs one-way channels,
 - richer parser support for additional BookSim output modes.

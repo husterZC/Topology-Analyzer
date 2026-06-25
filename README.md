@@ -22,7 +22,11 @@ System graph + generated routing table + custom BookSim anynet/table backend
 The repository also includes graph-based routing generators. `graph_updown`
 builds a BFS spanning tree and emits conservative up*/down* routes. `graph_lash`
 keeps shortest candidate paths where possible and assigns routes to virtual
-channel layers so each layer's channel dependency graph stays acyclic.
+channel layers so each layer's channel dependency graph stays acyclic. Fat-tree
+systems can use topology-specific `fattree_lca` routing as a simple baseline or
+`fattree_nca_hash` routing as the recommended balanced static baseline. The
+Fat-tree package also includes `fattree_dmodk`, `fattree_dmodc`, and
+BookSim-runtime `fattree_anca`.
 
 ## Layout
 

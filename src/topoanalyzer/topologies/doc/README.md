@@ -91,6 +91,106 @@ links:
 
 The mesh builder validates that override coordinates are in bounds.
 
+### `fattree`
+
+Radix-split k-ary n-tree / Fat-tree.
+
+```yaml
+topology:
+  type: fattree
+  params:
+    radix: 8
+    levels: 4
+```
+
+Parameters:
+
+- `radix`: router radix. Required, even integer greater than `1`.
+- `levels`: number of switch/router levels. Required, integer at least `2`.
+
+The builder uses `split = radix / 2`. For `radix: 8`, `split = 4`.
+
+Generated size:
+
+```text
+terminal_count = split ^ levels
+routers_per_level = split ^ (levels - 1)
+router_count = levels * routers_per_level
+```
+
+For `radix: 8, levels: 4`, this gives:
+
+```text
+terminal_count = 4 ^ 4 = 256
+routers_per_level = 4 ^ 3 = 64
+router_count = 4 * 64 = 256
+```
+
+Router IDs are generated as:
+
+```text
+ft.l<level>.<coord...>
+```
+
+Examples:
+
+```text
+ft.l0.0.0.0
+ft.l1.0.0.0
+ft.l3.1.2.3
+```
+
+Level `0` routers are leaf routers. Terminals attach only to leaf routers; the
+canonical graph stores this in metadata as `terminal_attachments`. This matters
+for simulator lowering because routes only need destination entries for routers
+that own terminals.
+
+#### Fat-tree Link Classes
+
+`fattree` supports these generic link classes:
+
+```yaml
+links:
+  default:
+    latency_cycles: 1
+    bandwidth: 64GB/s
+  classes:
+    up:
+      latency_cycles: 2
+      bandwidth: 64GB/s
+    down:
+      latency_cycles: 1
+      bandwidth: 64GB/s
+```
+
+It also supports per-level classes, where `level_<n>` is the lower endpoint
+level of the inter-router link:
+
+```yaml
+links:
+  default:
+    latency_cycles: 1
+    bandwidth: 64GB/s
+  classes:
+    level_0_up:
+      latency_cycles: 2
+      bandwidth: 64GB/s
+    level_0_down:
+      latency_cycles: 2
+      bandwidth: 64GB/s
+    level_1_up:
+      latency_cycles: 4
+      bandwidth: 128GB/s
+```
+
+Resolution still follows:
+
+```text
+pair override > class override > default
+```
+
+For Fat-tree pair overrides, use router ID string endpoints.
+
 ## Extending Topologies
 
 New topology builders should follow the same YAML pattern:
@@ -108,16 +208,6 @@ Recommended implementation pattern:
 2. Validate topology params and accepted link classes.
 3. Build the canonical `TopologyGraph`.
 4. Register the builder in `experiments/factory.py`.
-
-Expected future examples:
-
-```yaml
-topology:
-  type: fattree
-  params:
-    radix: 4
-    levels: 3
-```
 
 ```yaml
 topology:

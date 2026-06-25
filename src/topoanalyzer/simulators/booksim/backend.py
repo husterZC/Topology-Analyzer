@@ -30,7 +30,7 @@ class BookSimBackend:
         run_dir: Path,
     ) -> Path:
         run_dir.mkdir(parents=True, exist_ok=True)
-        if self.config_generator.backend == "anynet_table":
+        if self.config_generator.resolved_backend(system) == "anynet_table":
             _validate_vc_count(system, options)
             artifacts = self.anynet_exporter.materialize(system, run_dir)
             config = self.config_generator.generate(
@@ -80,9 +80,29 @@ class BookSimBackend:
 
 
 def _validate_vc_count(system: System, options: BookSimOptions) -> None:
-    max_vc = max(system.routing_table.route_vcs.values(), default=0)
+    max_vc = max(
+        [
+            *system.routing_table.route_vcs.values(),
+            *_terminal_route_vcs(system),
+        ],
+        default=0,
+    )
     if max_vc >= options.num_vcs:
         raise ValueError(
             f"routing table {system.routing_table.name!r} uses VC {max_vc}, "
             f"but benchmark num_vcs is {options.num_vcs}"
         )
+
+
+def _terminal_route_vcs(system: System) -> list[int]:
+    terminal_routes = system.routing_table.metadata.get("terminal_next_hops")
+    if not isinstance(terminal_routes, dict):
+        return []
+    vcs: list[int] = []
+    for current_routes in terminal_routes.values():
+        if not isinstance(current_routes, dict):
+            continue
+        for route in current_routes.values():
+            if isinstance(route, dict):
+                vcs.append(int(route.get("vc", 0)))
+    return vcs

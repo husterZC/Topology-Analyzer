@@ -34,6 +34,30 @@ routing:
   type: mesh_xy
 ```
 
+Fat-tree systems use the same shape with topology-specific parameters. For
+benchmarking, prefer `fattree_nca_hash` over `fattree_lca` because it spreads
+equal-cost upward routes across the Fat-tree. Other Fat-tree routing options
+include `fattree_dmodk`, `fattree_dmodc`, and BookSim-runtime `fattree_anca`.
+
+```yaml
+name: fattree_r8_l4_nca_hash
+
+topology:
+  type: fattree
+  params:
+    radix: 8
+    levels: 4
+
+links:
+  default:
+    latency_cycles: 1
+    bandwidth: 64GB/s
+
+routing:
+  type: fattree_nca_hash
+  seed: 0
+```
+
 Required top-level fields:
 
 - `name`: stable system name used in output directories and plot legends.

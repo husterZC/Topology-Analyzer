@@ -9,7 +9,9 @@ from topoanalyzer.benchmarks.latency_vs_injection import (
     LatencyInjectionRunner,
 )
 from topoanalyzer.experiments.factory import build_system_from_dict
+from topoanalyzer.experiments.loader import load_document
 from topoanalyzer.simulators.booksim.backend import BookSimBackend
+from topoanalyzer.cli import _load_benchmark_cases
 
 
 class BenchmarkTests(unittest.TestCase):
@@ -150,6 +152,34 @@ class BenchmarkTests(unittest.TestCase):
         settings = LatencyInjectionPlotSettings.from_dict({"y_axis": "log"})
 
         self.assertEqual(settings.y_scale, "log")
+
+    def test_fattree_vs_mesh_benchmark_uses_same_terminal_count(self):
+        benchmark_file = (
+            Path(__file__).resolve().parents[1]
+            / "examples"
+            / "benchmarks"
+            / "comparisons"
+            / "latency_vs_injection_fattree_r8_l4_vs_mesh_16x16.yaml"
+        )
+        spec = load_document(benchmark_file)
+        benchmark = LatencyInjectionBenchmark.from_dict(spec["benchmark"])
+        cases = _load_benchmark_cases(spec, benchmark_file.parent, benchmark)
+
+        self.assertEqual(benchmark.injection_rates[0], 0.001)
+        self.assertAlmostEqual(
+            benchmark.injection_rates[1] - benchmark.injection_rates[0],
+            0.004,
+        )
+        self.assertLessEqual(benchmark.injection_rates[-1], 0.1)
+        self.assertEqual(
+            [case.system.graph.metadata["terminal_count"] for case in cases],
+            [256, 256],
+        )
+        self.assertEqual(
+            [case.system.topology_type for case in cases],
+            ["fattree", "mesh2d"],
+        )
+        self.assertEqual(cases[0].system.routing_table.name, "fattree_nca_hash")
 
 
 if __name__ == "__main__":
