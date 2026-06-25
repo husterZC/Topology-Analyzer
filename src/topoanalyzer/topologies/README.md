@@ -28,8 +28,9 @@ These formulas describe the graph models implemented in this repository.
   is configured with the `groups` field.
 - Diameter is router-hop diameter. Terminal injection/ejection hops are not
   modeled as graph links.
-- Bisection bandwidth is one-way aggregate bandwidth across a balanced router
-  bisection. For heterogeneous links, use the bandwidth class in the formula.
+- Bisection bandwidth is the minimum one-way aggregate bandwidth across any
+  balanced router bisection. For heterogeneous links, use the bandwidth class
+  in the formula.
 
 ## Max Nodes
 
@@ -68,7 +69,7 @@ ruche systems.
 
 ## Bisection Bandwidth
 
-| Topology | One-Way Bisection Bandwidth |
+| Topology | Minimum One-Way Bisection Bandwidth |
 |---|---:|
 | `mesh2d` | `min(y*b_x, x*b_y)` |
 | `mesh3d` | `min(y*z*b_x, x*z*b_y, x*y*b_z)` |
