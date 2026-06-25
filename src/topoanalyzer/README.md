@@ -100,6 +100,7 @@ benchmark:
 
 plot:
   y_scale: log
+  y_max: 10000
   emit_companion_plot: true
 
 systems:

@@ -1,6 +1,10 @@
 import unittest
 
-from topoanalyzer.plotting.latency import _latency_series, _x_axis_label
+from topoanalyzer.plotting.latency import (
+    _latency_series,
+    _x_axis_label,
+    _y_limits_for_max,
+)
 
 
 class LatencyPlotTests(unittest.TestCase):
@@ -79,6 +83,18 @@ class LatencyPlotTests(unittest.TestCase):
         self.assertEqual(
             _x_axis_label(rows),
             "Injection rate (flits/node/cycle)",
+        )
+
+    def test_y_limits_for_max_keeps_requested_linear_top(self):
+        self.assertEqual(
+            _y_limits_for_max(100.0, False, [10.0, 20.0], 5.0),
+            (5.0, 100.0),
+        )
+
+    def test_y_limits_for_max_keeps_log_bottom_below_top(self):
+        self.assertEqual(
+            _y_limits_for_max(100.0, True, [200.0], 150.0),
+            (10.0, 100.0),
         )
 
 

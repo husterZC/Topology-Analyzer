@@ -19,6 +19,7 @@ def plot_latency_vs_injection(
     pdf_path: Path | None = None,
     *,
     log_y: bool = False,
+    y_max: float | None = None,
 ) -> list[Path]:
     rows = _load_ok_rows(csv_path)
     if not rows:
@@ -34,15 +35,20 @@ def plot_latency_vs_injection(
 
     png_path.parent.mkdir(parents=True, exist_ok=True)
     plt.figure(figsize=(7.0, 4.5))
+    all_latencies: list[float] = []
     for system, points in sorted(series.items()):
         x_values = [point.measured_injection_rate for point in points]
         y_values = [point.latency for point in points]
+        all_latencies.extend(y_values)
         plt.plot(x_values, y_values, marker="o", linewidth=1.8, label=system)
     plt.xlabel(_x_axis_label(rows))
     plt.ylabel("Average packet latency (cycles)")
     plt.title("Latency vs Injection Rate" + (" (log scale)" if log_y else ""))
     if log_y:
         plt.yscale("log")
+    if y_max is not None:
+        bottom, top = _y_limits_for_max(y_max, log_y, all_latencies, plt.ylim()[0])
+        plt.ylim(bottom=bottom, top=top)
     plt.grid(True, alpha=0.3)
     plt.legend()
     plt.tight_layout()
@@ -122,6 +128,29 @@ def _x_axis_label(rows: list[dict[str, str]]) -> str:
     if len(units) > 1:
         return "Injection rate (mixed units)"
     return "Injection rate"
+
+
+def _y_limits_for_max(
+    y_max: float,
+    log_y: bool,
+    latencies: list[float],
+    current_bottom: float,
+) -> tuple[float, float]:
+    if log_y:
+        bottom = current_bottom
+        if bottom <= 0:
+            positive_latencies = [latency for latency in latencies if latency > 0]
+            bottom = (
+                min(positive_latencies) / 1.5
+                if positive_latencies
+                else y_max / 10.0
+            )
+        if bottom >= y_max:
+            bottom = y_max / 10.0
+        return bottom, y_max
+    if current_bottom >= y_max:
+        return 0.0, y_max
+    return current_bottom, y_max
 
 
 def _parse_float(value: str | None) -> float | None:

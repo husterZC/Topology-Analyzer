@@ -117,6 +117,7 @@ class LatencyInjectionBenchmark:
 @dataclass(frozen=True)
 class LatencyInjectionPlotSettings:
     y_scale: str = "linear"
+    y_max: float | None = None
     emit_companion_plot: bool = True
 
     @classmethod
@@ -128,8 +129,16 @@ class LatencyInjectionPlotSettings:
             y_scale = "log"
         elif y_scale not in {"linear"}:
             raise ValueError(f"unsupported plot y_scale: {y_scale}")
+        y_max = None
+        if data.get("y_max") is not None:
+            y_max = float(data["y_max"])
+            if not math.isfinite(y_max) or y_max <= 0:
+                raise ValueError(
+                    f"plot y_max must be a positive finite value, got {y_max}"
+                )
         return cls(
             y_scale=y_scale,
+            y_max=y_max,
             emit_companion_plot=bool(data.get("emit_companion_plot", True)),
         )
 
@@ -242,6 +251,7 @@ class LatencyInjectionRunner:
             output_dir / "plots" / "latency_vs_injection.png",
             output_dir / "plots" / "latency_vs_injection.pdf",
             log_y=plot_settings.y_scale == "log",
+            y_max=plot_settings.y_max,
         )
         if plot_settings.emit_companion_plot:
             suffix = "linear" if plot_settings.y_scale == "log" else "log"
@@ -250,6 +260,7 @@ class LatencyInjectionRunner:
                 output_dir / "plots" / f"latency_vs_injection_{suffix}.png",
                 output_dir / "plots" / f"latency_vs_injection_{suffix}.pdf",
                 log_y=suffix == "log",
+                y_max=plot_settings.y_max,
             )
         return output_dir
 

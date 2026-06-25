@@ -202,6 +202,7 @@ benchmark:
 
 plot:
   y_scale: log
+  y_max: 10000
   emit_companion_plot: true
 
 systems:
@@ -232,6 +233,8 @@ y-axis. If `emit_companion_plot` is true, the runner also writes the opposite
 scale as `latency_vs_injection_linear.png` or `latency_vs_injection_log.png`.
 The sweep points are configured as offered `injection_rate`, but generated
 plots use BookSim's measured `accepted_rate * packet_size` on the x-axis.
+Set `plot.y_max` to cap the displayed latency axis without changing the
+recorded result values.
 
 Each run is self-contained:
 

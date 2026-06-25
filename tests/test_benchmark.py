@@ -232,6 +232,15 @@ class BenchmarkTests(unittest.TestCase):
 
         self.assertEqual(settings.y_scale, "log")
 
+    def test_plot_settings_accept_y_max(self):
+        settings = LatencyInjectionPlotSettings.from_dict({"y_max": 5000})
+
+        self.assertEqual(settings.y_max, 5000.0)
+
+    def test_plot_settings_reject_non_positive_y_max(self):
+        with self.assertRaisesRegex(ValueError, "plot y_max"):
+            LatencyInjectionPlotSettings.from_dict({"y_max": 0})
+
     def test_fattree_vs_mesh_benchmark_uses_same_terminal_count(self):
         benchmark_file = (
             Path(__file__).resolve().parents[1]

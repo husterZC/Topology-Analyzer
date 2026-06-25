@@ -5,6 +5,7 @@ Plot settings appear at the top level of a benchmark YAML file under `plot:`.
 ```yaml
 plot:
   y_scale: log
+  y_max: 10000
   emit_companion_plot: true
 ```
 
@@ -42,6 +43,20 @@ With log scale, the primary plot title becomes:
 ```text
 Latency vs Injection Rate (log scale)
 ```
+
+### `y_max`
+
+Optional positive number that sets the maximum y-axis limit for latency plots.
+Points above this value are clipped visually, but remain unchanged in the CSV
+and JSON results.
+
+```yaml
+plot:
+  y_max: 10000
+```
+
+This limit is applied to both the primary plot and the companion plot when
+`emit_companion_plot` is true.
 
 ### `emit_companion_plot`
 
