@@ -1,6 +1,7 @@
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.cache/
 .mypy_cache/
 .ruff_cache/
 *.egg-info/
@@ -9,3 +10,5 @@ dist/
 runs/
 .venv/
 venv/
+external/
+bin/booksim

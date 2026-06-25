@@ -21,6 +21,16 @@ routing function computes shortest paths internally and does not read an
 external route table. Apply `table_anynet.patch` to a BookSim2 checkout to make
 `AnyNet` load the generated route table.
 
+The easiest repo-local setup is:
+
+```bash
+make bootstrap
+source .venv/bin/activate
+```
+
+This clones BookSim2, applies this overlay, builds BookSim, and links the binary
+as `.venv/bin/booksim`.
+
 From the root of a BookSim2 checkout:
 
 ```bash

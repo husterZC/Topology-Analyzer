@@ -32,6 +32,7 @@ class LatencyInjectionBenchmark:
     vc_buffer_size: int = 8
     router_latency: int = 1
     timeout_seconds: int | None = None
+    stop_on_error: bool = False
 
     def __post_init__(self) -> None:
         object.__setattr__(
@@ -70,6 +71,7 @@ class LatencyInjectionBenchmark:
                 if data.get("timeout_seconds") is None
                 else int(data["timeout_seconds"])
             ),
+            stop_on_error=bool(data.get("stop_on_error", False)),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -87,6 +89,7 @@ class LatencyInjectionBenchmark:
             "vc_buffer_size": self.vc_buffer_size,
             "router_latency": self.router_latency,
             "timeout_seconds": self.timeout_seconds,
+            "stop_on_error": self.stop_on_error,
         }
 
     def with_overrides(self, overrides: dict[str, Any] | None) -> "LatencyInjectionBenchmark":
@@ -221,6 +224,16 @@ class LatencyInjectionRunner:
                         records.append(record)
                         self._write_results(records, output_dir)
                         bar.advance(label)
+                        if case.benchmark.stop_on_error and record.status in {
+                            "error",
+                            "failed",
+                        }:
+                            raise RuntimeError(
+                                "benchmark stopped after "
+                                f"{record.status} in {case.name} "
+                                f"at injection_rate={rate:g}, "
+                                f"repetition={repetition}: {record.error or ''}"
+                            )
         finally:
             bar.finish()
 

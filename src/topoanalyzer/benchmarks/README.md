@@ -21,6 +21,7 @@ benchmark:
   vc_buffer_size: 8
   router_latency: 1
   timeout_seconds: 120
+  stop_on_error: false
 
 systems:
   - path: ../../systems/mesh2d/xy/mesh2d_4x4_xy.yaml
@@ -83,6 +84,7 @@ benchmark:
   vc_buffer_size: 8
   router_latency: 1
   timeout_seconds: 120
+  stop_on_error: false
 ```
 
 Field reference:
@@ -100,6 +102,17 @@ Field reference:
 - `vc_buffer_size`: BookSim `vc_buf_size`. Optional, default `8`.
 - `router_latency`: stored in options for future router models. Current BookSim anynet path does not lower it directly.
 - `timeout_seconds`: optional per-run subprocess timeout.
+- `stop_on_error`: stop the sweep after the first `error` or `failed` run point. Optional, default `false`.
+
+By default the runner records an `error` row and continues to the next run point
+when one BookSim invocation fails. Set:
+
+```yaml
+benchmark:
+  stop_on_error: true
+```
+
+to abort the sweep immediately after writing the first failed record.
 
 ### Injection Rate Lists And Ranges
 

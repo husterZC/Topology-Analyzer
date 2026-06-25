@@ -33,6 +33,19 @@ topoanalyzer benchmark examples/benchmarks/mesh2d/latency_vs_injection_mesh2d_sc
   --booksim-executable /tmp/booksim2/src/booksim
 ```
 
+Recommended repo-local setup:
+
+```bash
+make bootstrap
+source .venv/bin/activate
+```
+
+`make bootstrap` clones BookSim2 into `external/booksim2`, applies the
+Topology-Analyzer overlay, builds BookSim, and links the binary into
+`.venv/bin/booksim` and `bin/booksim`. When YAML uses `executable: booksim`,
+the backend first uses `PATH`, then falls back to these repo-local bootstrap
+locations.
+
 ### `backend`
 
 BookSim lowering mode. Optional, default `anynet_table`.
@@ -121,6 +134,12 @@ different equal-cost Fat-tree paths.
 
 Stock BookSim2 `anynet` computes shortest paths internally and does not accept
 an external route table. Apply the overlay before running `anynet_table` configs:
+
+```bash
+make bootstrap
+```
+
+or manually:
 
 ```bash
 patch -p1 -d /path/to/booksim2 < booksim_overlays/booksim2/table_anynet.patch

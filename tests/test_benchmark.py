@@ -177,6 +177,56 @@ class BenchmarkTests(unittest.TestCase):
 
         self.assertEqual(override.injection_rates, [0.01, 0.03])
 
+    def test_stop_on_error_is_preserved_in_overrides(self):
+        benchmark = LatencyInjectionBenchmark.from_dict(
+            {
+                "type": "latency_vs_injection_rate",
+                "injection_rates": [0.01],
+                "stop_on_error": True,
+            }
+        )
+
+        self.assertTrue(benchmark.stop_on_error)
+        self.assertTrue(benchmark.with_overrides({"packet_size": 2}).stop_on_error)
+
+    def test_stop_on_error_records_first_error_then_aborts(self):
+        system = build_system_from_dict(
+            {
+                "name": "mesh2d_2x2_xy",
+                "topology": {"type": "mesh2d", "params": {"x": 2, "y": 2}},
+                "links": {"default": {"latency_cycles": 1, "bandwidth": "64GB/s"}},
+                "routing": {"type": "mesh_xy"},
+            }
+        )
+        benchmark = LatencyInjectionBenchmark(
+            injection_rates=[0.01, 0.02],
+            repetitions=1,
+            stop_on_error=True,
+        )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_root = Path(tmpdir)
+            with self.assertRaisesRegex(RuntimeError, "benchmark stopped"):
+                LatencyInjectionRunner(
+                    BookSimBackend(executable="definitely_missing_booksim")
+                ).run(
+                    [system],
+                    benchmark,
+                    output_root,
+                    progress=False,
+                    run_name="stop_on_error",
+                )
+
+            csv_text = (
+                output_root
+                / "stop_on_error"
+                / "results"
+                / "latency_vs_injection.csv"
+            ).read_text(encoding="utf-8")
+            self.assertIn("status", csv_text)
+            self.assertIn("error", csv_text)
+            self.assertIn("0.01", csv_text)
+            self.assertNotIn("0.02", csv_text)
+
     def test_plot_settings_accept_log_y_axis(self):
         settings = LatencyInjectionPlotSettings.from_dict({"y_axis": "log"})
 

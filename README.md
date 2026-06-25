@@ -1,300 +1,115 @@
 # Topology-Analyzer
 
-Topology-Analyzer is a research harness for NoC topology modeling, routing-table
-generation, and BookSim benchmarking.
+Topology-Analyzer is a research harness for NoC topology modeling.
+It builds topology graphs, generates routing tables, validates systems, and runs
+BookSim latency benchmarks.
 
-The internal model is deliberately not a BookSim config. A system is modeled as:
-
-```text
-Topology type
-+ topology-specific parameters
-+ resolved link parameters
-+ routing table
-```
-
-That system can then be validated, exported, or lowered into a simulator backend.
-The default implemented BookSim path is:
+The core system model is:
 
 ```text
-System graph + generated routing table + custom BookSim anynet/table backend
+topology + link parameters + routing table
 ```
 
-The repository also includes graph-based routing generators. `graph_updown`
-builds a BFS spanning tree and emits conservative up*/down* routes. `graph_lash`
-keeps shortest candidate paths where possible and assigns routes to virtual
-channel layers so each layer's channel dependency graph stays acyclic. Built-in
-regular topologies include 2D/3D mesh, 2D/3D torus, 3D ruche, Hypercube,
-Dragonfly, SlimNoC, UBMesh, and Fat-tree. Ruche, Hypercube, Dragonfly, SlimNoC,
-and UBMesh include stronger static candidates such as LASH-style VC routing and
-Valiant/VALg/APR-style hashed intermediate routing. Fat-tree systems can use
-topology-specific
-`fattree_lca` routing as a simple baseline or `fattree_nca_hash` routing as the
-recommended balanced static baseline. The Fat-tree package also includes
-`fattree_dmodk`, `fattree_dmodc`, and BookSim-runtime `fattree_anca`.
+For detailed setup, YAML formats, output layout, and backend notes, see
+[details.md](details.md).
 
-## Layout
+## Fast Start
 
-```text
-src/topoanalyzer/
-  model/              canonical graph, link, routing, and system objects
-  topologies/         topology builders such as mesh2d, torus3d, slimnoc
-  routing/            routing-table generators and deadlock checks
-  simulators/booksim/ BookSim config generation, execution, and parsing
-  benchmarks/         reusable benchmark runners
-  plotting/           result plotting
-  experiments/        YAML/JSON loading and system factory
-examples/
-  benchmarks/         benchmark specs grouped by topology
-  systems/            system specs grouped by topology/routing/link style
-tests/                focused unit tests
-```
-
-Detailed YAML-setting docs live next to the implementation:
-
-```text
-src/topoanalyzer/README.md
-src/topoanalyzer/model/README.md
-src/topoanalyzer/topologies/README.md
-src/topoanalyzer/routing/README.md
-src/topoanalyzer/benchmarks/README.md
-src/topoanalyzer/plotting/README.md
-src/topoanalyzer/experiments/README.md
-src/topoanalyzer/simulators/README.md
-src/topoanalyzer/simulators/booksim/README.md
-```
-
-## Install
+Build the Python environment and BookSim:
 
 ```bash
-pip install -e .
+make bootstrap
+source .venv/bin/activate
 ```
 
-or:
-
-```bash
-make install
-```
-
-Useful Make targets:
-
-```bash
-make help
-make test
-make booksim-apply-overlay BOOKSIM_DIR=/path/to/booksim2
-make booksim-build BOOKSIM_DIR=/path/to/booksim2
-make clean-runs
-make clean-build
-make clean
-```
-
-## Validate A System
-
-```bash
-topoanalyzer validate examples/systems/mesh2d/xy/mesh2d_4x4_xy.yaml
-```
-
-## Build Artifacts
-
-```bash
-topoanalyzer build examples/systems/mesh2d/xy/mesh2d_4x4_xy.yaml --output-dir build/mesh2d_4x4_xy
-```
-
-This writes:
-
-```text
-system.json
-topology.json
-routing_table.json
-validation.json
-```
-
-## Dry-Run A Benchmark
+Run a dry benchmark first:
 
 ```bash
 topoanalyzer benchmark examples/benchmarks/mesh2d/latency_vs_injection_mesh2d.yaml --dry-run
 ```
 
-Dry-run mode creates the run directory and BookSim input files without launching
-BookSim.
-
-## Run A BookSim Sweep
-
-Make sure the configured BookSim binary exists on `PATH`, or set the executable
-in the benchmark YAML. The default `anynet_table` backend requires the BookSim2
-overlay in [booksim_overlays/booksim2](</scratch2/chi/SoftHier_porj/codex/Topology-Analyzer/booksim_overlays/booksim2/README.md>).
+Run a real BookSim sweep:
 
 ```bash
 topoanalyzer benchmark examples/benchmarks/mesh2d/latency_vs_injection_mesh2d.yaml
 ```
 
-To compare square 2D mesh scales:
+Useful commands:
 
 ```bash
-topoanalyzer benchmark examples/benchmarks/mesh2d/latency_vs_injection_mesh2d_scales.yaml
+make help
+make test
+make clean-runs
 ```
 
-Benchmark files support global defaults plus per-system overrides. This is useful
-when a large mesh needs a shorter injection sweep or a longer timeout than a
-small mesh:
+## Supported Topologies
 
-```yaml
-benchmark:
-  type: latency_vs_injection_rate
-  injection_rates:
-    range:
-      start: 0.01
-      stop: 0.21
-      step: 0.04
-  injection_rate_unit: flits/node/cycle
-  packet_size: 1
-  repetitions: 1
-  timeout_seconds: 120
+| Topology | YAML Type | Main Parameters | Notes |
+|---|---|---|---|
+| 2D Mesh | `mesh2d` | `x`, `y`, `concentration` | Rectangular mesh. |
+| 3D Mesh | `mesh3d` | `x`, `y`, `z`, `concentration` | Rectangular 3D mesh. |
+| 2D Torus | `torus2d` | `x`, `y`, `concentration` | Wraparound links. |
+| 3D Torus | `torus3d` | `x`, `y`, `z`, `concentration` | Wraparound links. |
+| 3D Ruche | `ruche3d` | `x`, `y`, `z`, `stride`, `concentration` | Mesh plus express links. |
+| Hypercube | `hypercube` | `dimension`, `concentration` | Binary hypercube. |
+| Dragonfly | `dragonfly` | `p`, `a`, `h`, `groups` | Local groups plus global links. |
+| SlimNoC | `slimnoc` | `q`, `concentration` | MMS/SlimFly-style diameter-2 graph. |
+| UBMesh | `ubmesh` | `dimensions`, `dimension_names`, `concentration` | nD-FullMesh core from the UBMesh paper. |
+| Fat-tree | `fattree` | `radix`, `levels` | Regular radix-split Fat-tree. |
 
-plot:
-  y_scale: log
-  emit_companion_plot: true
+## Supported Routing Algorithms
 
-systems:
-  - path: ../../systems/mesh2d/xy/mesh2d_2x2_xy.yaml
-  - path: ../../systems/mesh2d/xy/mesh2d_4x4_xy.yaml
-  - path: ../../systems/mesh2d/xy/mesh2d_16x16_xy.yaml
-    benchmark:
-      injection_rates: "range(0.01, 0.05, 0.02)"
-      timeout_seconds: 300
-```
+| Routing Type | Topology | Description |
+|---|---|---|
+| `mesh_xy` | `mesh2d` | Deterministic XY routing. |
+| `mesh_xyz` | `mesh3d` | Deterministic XYZ routing. |
+| `torus_xy` | `torus2d` | Conservative table-compatible XY routing. |
+| `torus_xyz` | `torus3d` | Conservative table-compatible XYZ routing. |
+| `ruche_xyz` | `ruche3d` | Dimension-order routing using ruche express links. |
+| `ruche_lash` | `ruche3d` | LASH-style short-path routing with VC assignment. |
+| `ruche_valiant_hash` | `ruche3d` | Static Valiant-style hashed intermediate routing. |
+| `hypercube_ecube` | `hypercube` | Deterministic E-cube routing. |
+| `hypercube_lash` | `hypercube` | Minimal path-diversity routing with VC assignment. |
+| `hypercube_valiant_hash` | `hypercube` | Static Valiant-style hashed intermediate routing. |
+| `dragonfly_min` | `dragonfly` | Minimal local/global/local routing. |
+| `dragonfly_valiant_hash` | `dragonfly` | Static VALg-style hashed intermediate-group routing. |
+| `slimnoc_min` | `slimnoc` | Static shortest-path SlimNoC routing. |
+| `slimnoc_valiant_hash` | `slimnoc` | Static Valiant-style hashed intermediate-router routing. |
+| `ubmesh_shortest` | `ubmesh` | Minimum-hop nD-FullMesh routing. |
+| `ubmesh_dor` | `ubmesh` | Deterministic dimension-order routing. |
+| `ubmesh_apr_hash` | `ubmesh` | Static APR-style hashed detour routing. |
+| `ubmesh_apr_runtime` | `ubmesh` | BookSim runtime APR marker backend. |
+| `ubmesh_tfc` | `ubmesh` | Static two-VL TFC approximation. |
+| `fattree_lca` | `fattree` | Deterministic nearest-common-ancestor routing. |
+| `fattree_nca_hash` | `fattree` | Balanced static ECMP-style NCA routing. |
+| `fattree_dmodk` | `fattree` | Deterministic D-mod-k-style routing. |
+| `fattree_dmodc` | `fattree` | Fault-aware Dmodc-style routing. |
+| `fattree_anca` | `fattree` | BookSim runtime adaptive ANCA routing. |
+| `graph_updown` | most connected graphs | Generic up*/down* routing. |
+| `graph_lash` | most connected graphs | Generic short-path routing with VC assignment. |
 
-Supported injection-rate units are `flits/node/cycle` and
-`packets/node/cycle`. For BookSim, `flits/node/cycle` emits
-`injection_rate_uses_flits = 1`; BookSim then converts the configured flit rate
-to packet injection rate using `packet_size`.
+## Supported Benchmark Tests
 
-`injection_rates` can be an explicit numeric list or a stop-exclusive
-`range(start, stop, step)` specification. For example, `start: 0.001`,
-`stop: 0.1`, and `step: 0.004` expands to 25 rates from `0.001` through
-`0.097`.
+| Benchmark Type | Output | Description |
+|---|---|---|
+| `latency_vs_injection_rate` | CSV, JSON, PNG, PDF | Sweeps injection rate and plots latency. |
 
-With `plot.y_scale: log`, the primary `latency_vs_injection.png` uses a log
-y-axis. If `emit_companion_plot` is true, the runner also writes the opposite
-scale as `latency_vs_injection_linear.png` or `latency_vs_injection_log.png`.
+Set `benchmark.stop_on_error: true` to abort a sweep after the first failed
+BookSim point. By default, errors are recorded and the sweep continues.
 
-Each run is self-contained:
+Example benchmark YAML files:
 
-```text
-runs/<run-name>/
-  cases/<case-name>/
-    case.json
-  systems/<system-name>/
-    system.json
-    topology.json
-    routing_table.json
-    validation.json
-  booksim/<case-name>/inj_<rate>_rep_<n>/
-    booksim.cfg
-    anynet.net
-    anynet.routes
-    anynet_mapping.json
-    stdout.txt
-    stderr.txt
-  results/
-    latency_vs_injection.csv
-    latency_vs_injection.json
-  plots/
-    latency_vs_injection.png
-    latency_vs_injection.pdf
-```
+| Example | Purpose |
+|---|---|
+| `examples/benchmarks/mesh2d/latency_vs_injection_mesh2d.yaml` | Small 2D mesh sweep. |
+| `examples/benchmarks/mesh2d/latency_vs_injection_mesh2d_scales.yaml` | Multi-scale 2D mesh sweep. |
+| `examples/benchmarks/comparisons/latency_vs_injection_fattree_r8_l4_vs_mesh_16x16.yaml` | Cross-topology comparison. |
 
-## Link Parameter Formats
+## Detailed Docs
 
-Simple homogeneous links:
-
-```yaml
-links:
-  default:
-    latency_cycles: 2
-    bandwidth: 64GB/s
-```
-
-Orientation-specific links:
-
-```yaml
-links:
-  default:
-    latency_cycles: 2
-    bandwidth: 64GB/s
-  classes:
-    x:
-      latency_cycles: 2
-      bandwidth: 64GB/s
-    y:
-      latency_cycles: 5
-      bandwidth: 16GB/s
-```
-
-Pair override:
-
-```yaml
-links:
-  default:
-    latency_cycles: 2
-    bandwidth: 64GB/s
-  overrides:
-    - src: [0, 0]
-      dst: [1, 0]
-      latency_cycles: 7
-      bandwidth: 8GB/s
-```
-
-Resolution order is:
-
-```text
-pair override > link class/orientation > default
-```
-
-## BookSim Backend
-
-`booksim.backend` defaults to `anynet_table`.
-
-```yaml
-booksim:
-  executable: /path/to/booksim
-  backend: anynet_table
-```
-
-For every system, this backend writes:
-
-- `anynet.net`: arbitrary router graph for BookSim `topology = anynet`.
-- `anynet.routes`: deterministic table-driven routes, including VC selection.
-- `anynet_mapping.json`: router, terminal, link, latency, and bandwidth metadata.
-- `booksim.cfg`: config pointing at those generated files.
-
-This removes the old stock-mesh blockers for rectangular meshes, heterogeneous
-router-link latency, and graph-generated routing tables such as `graph_updown`
-and `graph_lash`.
-
-Before running BookSim, apply the overlay:
-
-```bash
-patch -p1 -d /path/to/booksim2 < booksim_overlays/booksim2/table_anynet.patch
-make -C /path/to/booksim2/src
-```
-
-The legacy stock mesh backend is still available for comparison:
-
-```yaml
-booksim:
-  backend: stock_mesh
-```
-
-That compatibility backend is intentionally narrow: square `mesh2d`, `mesh_xy`,
-homogeneous 1-cycle links.
-
-Remaining limitation: BookSim2 `FlitChannel` exposes per-link latency but not a
-native per-link bandwidth field. Topology-Analyzer preserves bandwidth in
-`anynet_mapping.json`; modeling true per-edge bandwidth needs a deeper BookSim
-channel-model extension.
-
-`graph_lash` is intended as the better general-topology static-routing baseline:
-it tries shortest/simple candidate paths and places each route into the lowest
-VC layer whose channel dependency graph remains acyclic. If the candidate set is
-already acyclic, it may use one VC; otherwise it uses additional VCs up to
-`max_vcs`.
+- [details.md](details.md): longer project guide.
+- [src/topoanalyzer/README.md](src/topoanalyzer/README.md): YAML overview.
+- [src/topoanalyzer/topologies/README.md](src/topoanalyzer/topologies/README.md): topology parameters and formulas.
+- [src/topoanalyzer/routing/README.md](src/topoanalyzer/routing/README.md): routing settings and algorithm details.
+- [src/topoanalyzer/benchmarks/README.md](src/topoanalyzer/benchmarks/README.md): benchmark settings.
+- [src/topoanalyzer/simulators/booksim/README.md](src/topoanalyzer/simulators/booksim/README.md): BookSim backend settings.

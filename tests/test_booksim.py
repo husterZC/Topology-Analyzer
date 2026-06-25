@@ -205,6 +205,16 @@ class BookSimTests(unittest.TestCase):
                 network_file="/tmp/anynet.net",
             )
 
+    def test_missing_booksim_error_mentions_bootstrap(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = Path(tmpdir) / "booksim.cfg"
+            config_path.write_text("topology = anynet;\n", encoding="utf-8")
+
+            with self.assertRaisesRegex(FileNotFoundError, "make bootstrap"):
+                BookSimBackend(executable="definitely_missing_booksim").run_config(
+                    config_path
+                )
+
     def test_parses_common_metrics(self):
         metrics = parse_booksim_output(
             """

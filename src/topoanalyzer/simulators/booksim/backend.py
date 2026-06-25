@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -19,7 +20,7 @@ class BookSimRawResult:
 
 class BookSimBackend:
     def __init__(self, executable: str = "booksim", backend: str = "anynet_table") -> None:
-        self.executable = executable
+        self.executable = _resolve_executable(executable)
         self.config_generator = BookSimConfigGenerator(backend=backend)
         self.anynet_exporter = AnyNetTableExporter()
 
@@ -58,13 +59,20 @@ class BookSimBackend:
         config_path: Path,
         timeout_seconds: int | None = None,
     ) -> BookSimRawResult:
-        completed = subprocess.run(
-            [self.executable, str(config_path)],
-            check=False,
-            text=True,
-            capture_output=True,
-            timeout=timeout_seconds,
-        )
+        try:
+            completed = subprocess.run(
+                [self.executable, str(config_path)],
+                check=False,
+                text=True,
+                capture_output=True,
+                timeout=timeout_seconds,
+            )
+        except FileNotFoundError as exc:
+            raise FileNotFoundError(
+                f"BookSim executable {self.executable!r} was not found. "
+                "Run `make bootstrap`, activate `.venv`, set `booksim.executable`, "
+                "or pass `--booksim-executable /path/to/booksim`."
+            ) from exc
         stdout_path = config_path.parent / "stdout.txt"
         stderr_path = config_path.parent / "stderr.txt"
         stdout_path.write_text(completed.stdout, encoding="utf-8")
@@ -119,3 +127,30 @@ def _terminal_route_vcs(system: System) -> list[int]:
             if isinstance(route, dict):
                 vcs.append(int(route.get("vc", 0)))
     return vcs
+
+
+def _resolve_executable(executable: str) -> str:
+    if _has_path_separator(executable):
+        return executable
+    resolved = shutil.which(executable)
+    if resolved is not None:
+        return resolved
+    if executable != "booksim":
+        return executable
+
+    repo_root = Path(__file__).resolve().parents[4]
+    candidates = [
+        Path.cwd() / ".venv" / "bin" / "booksim",
+        Path.cwd() / "bin" / "booksim",
+        repo_root / ".venv" / "bin" / "booksim",
+        repo_root / "bin" / "booksim",
+        repo_root / "external" / "booksim2" / "src" / "booksim",
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return str(candidate)
+    return executable
+
+
+def _has_path_separator(value: str) -> bool:
+    return "/" in value or "\\" in value
