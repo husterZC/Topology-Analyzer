@@ -148,6 +148,35 @@ class BenchmarkTests(unittest.TestCase):
             self.assertIn("packet_size = 4;", config_text)
             self.assertIn("injection_rate_uses_flits = 1;", config_text)
 
+    def test_injection_rates_accept_range_mapping(self):
+        benchmark = LatencyInjectionBenchmark.from_dict(
+            {
+                "type": "latency_vs_injection_rate",
+                "injection_rates": {
+                    "range": {"start": 0.001, "stop": 0.1, "step": 0.004}
+                },
+            }
+        )
+
+        self.assertEqual(len(benchmark.injection_rates), 25)
+        self.assertEqual(benchmark.injection_rates[0], 0.001)
+        self.assertAlmostEqual(
+            benchmark.injection_rates[1] - benchmark.injection_rates[0],
+            0.004,
+        )
+        self.assertEqual(benchmark.injection_rates[-1], 0.097)
+
+    def test_injection_rates_accept_range_string_in_case_override(self):
+        benchmark = LatencyInjectionBenchmark(
+            injection_rates=[0.01, 0.02],
+            repetitions=1,
+        )
+        override = benchmark.with_overrides(
+            {"injection_rates": "range(0.01, 0.05, 0.02)"}
+        )
+
+        self.assertEqual(override.injection_rates, [0.01, 0.03])
+
     def test_plot_settings_accept_log_y_axis(self):
         settings = LatencyInjectionPlotSettings.from_dict({"y_axis": "log"})
 
@@ -166,6 +195,7 @@ class BenchmarkTests(unittest.TestCase):
         cases = _load_benchmark_cases(spec, benchmark_file.parent, benchmark)
 
         self.assertEqual(benchmark.injection_rates[0], 0.001)
+        self.assertEqual(len(benchmark.injection_rates), 25)
         self.assertAlmostEqual(
             benchmark.injection_rates[1] - benchmark.injection_rates[0],
             0.004,

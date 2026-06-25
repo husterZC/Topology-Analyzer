@@ -106,7 +106,7 @@ Per-case benchmark overrides:
 systems:
   - path: ../../systems/mesh2d/xy/mesh2d_16x16_xy.yaml
     benchmark:
-      injection_rates: [0.01, 0.02, 0.04]
+      injection_rates: "range(0.01, 0.05, 0.02)"
       timeout_seconds: 300
 ```
 

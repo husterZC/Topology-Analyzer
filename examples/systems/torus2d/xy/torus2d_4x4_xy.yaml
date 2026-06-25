@@ -1,0 +1,22 @@
+name: torus2d_4x4_xy
+
+topology:
+  type: torus2d
+  params:
+    x: 4
+    y: 4
+
+links:
+  default:
+    latency_cycles: 1
+    bandwidth: 64GB/s
+  classes:
+    x_wrap:
+      latency_cycles: 2
+      bandwidth: 64GB/s
+    y_wrap:
+      latency_cycles: 2
+      bandwidth: 64GB/s
+
+routing:
+  type: torus_xy

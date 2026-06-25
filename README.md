@@ -22,18 +22,21 @@ System graph + generated routing table + custom BookSim anynet/table backend
 The repository also includes graph-based routing generators. `graph_updown`
 builds a BFS spanning tree and emits conservative up*/down* routes. `graph_lash`
 keeps shortest candidate paths where possible and assigns routes to virtual
-channel layers so each layer's channel dependency graph stays acyclic. Fat-tree
-systems can use topology-specific `fattree_lca` routing as a simple baseline or
-`fattree_nca_hash` routing as the recommended balanced static baseline. The
-Fat-tree package also includes `fattree_dmodk`, `fattree_dmodc`, and
-BookSim-runtime `fattree_anca`.
+channel layers so each layer's channel dependency graph stays acyclic. Built-in
+regular topologies include 2D/3D mesh, 2D/3D torus, 3D ruche, Hypercube,
+Dragonfly, and Fat-tree. Ruche, Hypercube, and Dragonfly include stronger
+static candidates such as LASH-style VC routing and Valiant/VALg-style hashed
+intermediate routing. Fat-tree systems can use topology-specific
+`fattree_lca` routing as a simple baseline or `fattree_nca_hash` routing as the
+recommended balanced static baseline. The Fat-tree package also includes
+`fattree_dmodk`, `fattree_dmodc`, and BookSim-runtime `fattree_anca`.
 
 ## Layout
 
 ```text
 src/topoanalyzer/
   model/              canonical graph, link, routing, and system objects
-  topologies/         topology builders such as mesh2d
+  topologies/         topology builders such as mesh2d, torus3d, dragonfly
   routing/            routing-table generators and deadlock checks
   simulators/booksim/ BookSim config generation, execution, and parsing
   benchmarks/         reusable benchmark runners
@@ -48,15 +51,15 @@ tests/                focused unit tests
 Detailed YAML-setting docs live next to the implementation:
 
 ```text
-src/topoanalyzer/doc/README.md
-src/topoanalyzer/model/doc/README.md
-src/topoanalyzer/topologies/doc/README.md
-src/topoanalyzer/routing/doc/README.md
-src/topoanalyzer/benchmarks/doc/README.md
-src/topoanalyzer/plotting/doc/README.md
-src/topoanalyzer/experiments/doc/README.md
-src/topoanalyzer/simulators/doc/README.md
-src/topoanalyzer/simulators/booksim/doc/README.md
+src/topoanalyzer/README.md
+src/topoanalyzer/model/README.md
+src/topoanalyzer/topologies/README.md
+src/topoanalyzer/routing/README.md
+src/topoanalyzer/benchmarks/README.md
+src/topoanalyzer/plotting/README.md
+src/topoanalyzer/experiments/README.md
+src/topoanalyzer/simulators/README.md
+src/topoanalyzer/simulators/booksim/README.md
 ```
 
 ## Install
@@ -136,7 +139,11 @@ small mesh:
 ```yaml
 benchmark:
   type: latency_vs_injection_rate
-  injection_rates: [0.01, 0.02, 0.04, 0.08, 0.12, 0.16, 0.20]
+  injection_rates:
+    range:
+      start: 0.01
+      stop: 0.21
+      step: 0.04
   injection_rate_unit: flits/node/cycle
   packet_size: 1
   repetitions: 1
@@ -151,7 +158,7 @@ systems:
   - path: ../../systems/mesh2d/xy/mesh2d_4x4_xy.yaml
   - path: ../../systems/mesh2d/xy/mesh2d_16x16_xy.yaml
     benchmark:
-      injection_rates: [0.01, 0.02, 0.04]
+      injection_rates: "range(0.01, 0.05, 0.02)"
       timeout_seconds: 300
 ```
 
@@ -159,6 +166,11 @@ Supported injection-rate units are `flits/node/cycle` and
 `packets/node/cycle`. For BookSim, `flits/node/cycle` emits
 `injection_rate_uses_flits = 1`; BookSim then converts the configured flit rate
 to packet injection rate using `packet_size`.
+
+`injection_rates` can be an explicit numeric list or a stop-exclusive
+`range(start, stop, step)` specification. For example, `start: 0.001`,
+`stop: 0.1`, and `step: 0.004` expands to 25 rates from `0.001` through
+`0.097`.
 
 With `plot.y_scale: log`, the primary `latency_vs_injection.png` uses a log
 y-axis. If `emit_companion_plot` is true, the runner also writes the opposite

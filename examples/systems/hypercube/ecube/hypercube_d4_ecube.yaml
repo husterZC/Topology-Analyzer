@@ -1,0 +1,14 @@
+name: hypercube_d4_ecube
+
+topology:
+  type: hypercube
+  params:
+    dimension: 4
+
+links:
+  default:
+    latency_cycles: 1
+    bandwidth: 64GB/s
+
+routing:
+  type: hypercube_ecube

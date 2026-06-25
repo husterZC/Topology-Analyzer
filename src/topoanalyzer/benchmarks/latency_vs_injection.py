@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import csv
 import json
+import math
+import re
 from dataclasses import dataclass
 from datetime import datetime
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
@@ -43,11 +46,13 @@ class LatencyInjectionBenchmark:
     def from_dict(cls, data: dict[str, Any]) -> "LatencyInjectionBenchmark":
         if data.get("type") not in (None, "latency_vs_injection_rate"):
             raise ValueError(f"unsupported benchmark type: {data.get('type')}")
+        if "injection_rates" not in data:
+            raise ValueError("benchmark requires injection_rates")
         packet_size = int(data.get("packet_size", 1))
         if packet_size <= 0:
             raise ValueError(f"packet_size must be positive, got {packet_size}")
         return cls(
-            injection_rates=[float(value) for value in data["injection_rates"]],
+            injection_rates=_parse_injection_rates(data["injection_rates"]),
             injection_rate_unit=_normalize_injection_rate_unit(
                 str(data.get("injection_rate_unit", "packets/node/cycle"))
             ),
@@ -420,3 +425,111 @@ def _normalize_injection_rate_unit(unit: str) -> str:
             f"{unit!r}; expected flits/node/cycle or packets/node/cycle"
         )
     return aliases[normalized]
+
+
+_RANGE_PATTERN = re.compile(r"^range\((?P<args>.*)\)$")
+
+
+def _parse_injection_rates(spec: Any) -> list[float]:
+    if isinstance(spec, str):
+        return _parse_injection_rate_range_string(spec)
+    if isinstance(spec, dict):
+        return _parse_injection_rate_range_mapping(spec)
+    try:
+        return _validate_injection_rates([float(value) for value in spec])
+    except TypeError as exc:
+        raise ValueError(
+            "injection_rates must be a list or a range specification"
+        ) from exc
+
+
+def _parse_injection_rate_range_string(spec: str) -> list[float]:
+    match = _RANGE_PATTERN.fullmatch(spec.strip())
+    if not match:
+        raise ValueError(
+            "string injection_rates must use range(start, stop, step)"
+        )
+    args = [arg.strip() for arg in match.group("args").split(",")]
+    if len(args) != 3 or any(not arg for arg in args):
+        raise ValueError(
+            "range injection_rates must provide start, stop, and step"
+        )
+    return _expand_injection_rate_range(
+        start=_decimal_from_value(args[0], "start"),
+        stop=_decimal_from_value(args[1], "stop"),
+        step=_decimal_from_value(args[2], "step"),
+        inclusive=False,
+    )
+
+
+def _parse_injection_rate_range_mapping(spec: dict[str, Any]) -> list[float]:
+    inclusive = bool(spec.get("inclusive", False))
+    if "range" in spec:
+        range_spec = spec["range"]
+        if not isinstance(range_spec, dict):
+            raise ValueError("injection_rates.range must be a mapping")
+        inclusive = bool(range_spec.get("inclusive", inclusive))
+    else:
+        range_spec = spec
+
+    missing = [
+        field for field in ("start", "stop", "step") if field not in range_spec
+    ]
+    if missing:
+        raise ValueError(
+            "range injection_rates missing field(s): " + ", ".join(missing)
+        )
+    return _expand_injection_rate_range(
+        start=_decimal_from_value(range_spec["start"], "start"),
+        stop=_decimal_from_value(range_spec["stop"], "stop"),
+        step=_decimal_from_value(range_spec["step"], "step"),
+        inclusive=inclusive,
+    )
+
+
+def _expand_injection_rate_range(
+    *,
+    start: Decimal,
+    stop: Decimal,
+    step: Decimal,
+    inclusive: bool,
+) -> list[float]:
+    if step == 0:
+        raise ValueError("range injection_rates step must be non-zero")
+    values: list[float] = []
+    current = start
+    increasing = step > 0
+
+    def in_bounds(value: Decimal) -> bool:
+        if increasing:
+            return value <= stop if inclusive else value < stop
+        return value >= stop if inclusive else value > stop
+
+    while in_bounds(current):
+        values.append(float(current))
+        if len(values) > 100000:
+            raise ValueError("range injection_rates produced too many values")
+        current += step
+
+    return _validate_injection_rates(values)
+
+
+def _decimal_from_value(value: Any, field: str) -> Decimal:
+    try:
+        decimal_value = Decimal(str(value))
+    except InvalidOperation as exc:
+        raise ValueError(f"range injection_rates {field} must be numeric") from exc
+    if not decimal_value.is_finite():
+        raise ValueError(f"range injection_rates {field} must be finite")
+    return decimal_value
+
+
+def _validate_injection_rates(rates: list[float]) -> list[float]:
+    if not rates:
+        raise ValueError("injection_rates must produce at least one value")
+    for rate in rates:
+        if not math.isfinite(rate):
+            raise ValueError(f"injection_rates must be finite, got {rate}")
+        if rate < 0:
+            raise ValueError(f"injection_rates must be non-negative, got {rate}")
+    return rates

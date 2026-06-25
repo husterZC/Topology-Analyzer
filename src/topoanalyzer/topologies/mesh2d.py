@@ -49,7 +49,7 @@ class Mesh2DTopologyBuilder(TopologyBuilder):
         report.merge(links.validate(allowed_classes=self.link_classes))
         for idx, override in enumerate(links.overrides):
             for endpoint_name, endpoint in (("src", override.src), ("dst", override.dst)):
-                if isinstance(endpoint, tuple):
+                if isinstance(endpoint, tuple) and len(endpoint) == 2:
                     ex, ey = endpoint
                     if ex < 0 or ex >= params.x or ey < 0 or ey >= params.y:
                         report.add_error(

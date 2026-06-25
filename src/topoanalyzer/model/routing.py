@@ -28,6 +28,7 @@ class RoutingTable:
     entries: list[RouteEntry] = field(default_factory=list)
     paths: dict[tuple[str, str], list[str]] = field(default_factory=dict)
     route_vcs: dict[tuple[str, str], int] = field(default_factory=dict)
+    path_vcs: dict[tuple[str, str], list[int]] = field(default_factory=dict)
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def add_path(
@@ -37,19 +38,29 @@ class RoutingTable:
         path: list[str],
         *,
         vc: int = 0,
+        hop_vcs: list[int] | None = None,
     ) -> None:
         if len(path) < 2:
             return
+        channel_count = len(path) - 1
+        if hop_vcs is None:
+            hop_vcs = [vc] * channel_count
+        if len(hop_vcs) != channel_count:
+            raise ValueError(
+                "hop_vcs length must match route channel count: "
+                f"{len(hop_vcs)} != {channel_count}"
+            )
         self.paths[(source, destination)] = list(path)
-        self.route_vcs[(source, destination)] = vc
-        for current, next_hop in zip(path[:-1], path[1:]):
+        self.route_vcs[(source, destination)] = hop_vcs[0]
+        self.path_vcs[(source, destination)] = list(hop_vcs)
+        for (current, next_hop), hop_vc in zip(zip(path[:-1], path[1:]), hop_vcs):
             self.entries.append(
                 RouteEntry(
                     current=current,
                     destination=destination,
                     next_hop=next_hop,
                     output_port=_infer_output_port(current, next_hop),
-                    vc=vc,
+                    vc=hop_vc,
                 )
             )
 
@@ -57,6 +68,16 @@ class RoutingTable:
         for entry in self.entries:
             if entry.current == current and entry.destination == destination:
                 return entry.next_hop
+        return None
+
+    def next_hop_with_vc(
+        self,
+        current: str,
+        destination: str,
+    ) -> tuple[str, int] | None:
+        for entry in self.entries:
+            if entry.current == current and entry.destination == destination:
+                return entry.next_hop, entry.vc
         return None
 
     def to_dict(self) -> dict[str, Any]:
@@ -70,6 +91,10 @@ class RoutingTable:
                     "destination": dst,
                     "path": path,
                     "vc": self.route_vcs.get((src, dst), 0),
+                    "hop_vcs": self.path_vcs.get(
+                        (src, dst),
+                        [self.route_vcs.get((src, dst), 0)] * max(len(path) - 1, 0),
+                    ),
                 }
                 for (src, dst), path in sorted(self.paths.items())
             ],

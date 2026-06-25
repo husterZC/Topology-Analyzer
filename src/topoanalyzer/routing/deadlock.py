@@ -11,7 +11,11 @@ def channel_dependency_has_cycle(table: RoutingTable) -> tuple[bool, list[Channe
     graph: dict[Channel, set[Channel]] = defaultdict(set)
     for route, path in table.paths.items():
         vc = table.route_vcs.get(route, 0)
-        channels = [(src, dst, vc) for src, dst in zip(path[:-1], path[1:])]
+        hop_vcs = table.path_vcs.get(route, [vc] * max(len(path) - 1, 0))
+        channels = [
+            (src, dst, hop_vc)
+            for (src, dst), hop_vc in zip(zip(path[:-1], path[1:]), hop_vcs)
+        ]
         for first, second in zip(channels[:-1], channels[1:]):
             graph[first].add(second)
             graph.setdefault(second, set())

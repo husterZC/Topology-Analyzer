@@ -38,6 +38,9 @@ Fat-tree systems use the same shape with topology-specific parameters. For
 benchmarking, prefer `fattree_nca_hash` over `fattree_lca` because it spreads
 equal-cost upward routes across the Fat-tree. Other Fat-tree routing options
 include `fattree_dmodk`, `fattree_dmodc`, and BookSim-runtime `fattree_anca`.
+Ruche, Hypercube, and Dragonfly systems also include stronger static candidates
+such as `ruche_lash`, `ruche_valiant_hash`, `hypercube_lash`,
+`hypercube_valiant_hash`, and `dragonfly_valiant_hash`.
 
 ```yaml
 name: fattree_r8_l4_nca_hash
@@ -80,7 +83,11 @@ dependency graph.
 ```yaml
 benchmark:
   type: latency_vs_injection_rate
-  injection_rates: [0.01, 0.02, 0.04]
+  injection_rates:
+    range:
+      start: 0.001
+      stop: 0.1
+      step: 0.004
   injection_rate_unit: flits/node/cycle
   packet_size: 1
   traffic: uniform
@@ -98,7 +105,7 @@ systems:
   - path: ../../systems/mesh2d/xy/mesh2d_4x4_xy.yaml
   - path: ../../systems/mesh2d/xy/mesh2d_16x16_xy.yaml
     benchmark:
-      injection_rates: [0.01, 0.02, 0.04]
+      injection_rates: "range(0.01, 0.05, 0.02)"
 
 booksim:
   executable: booksim
@@ -135,11 +142,11 @@ examples/systems/mesh2d/xy/mesh2d_4x4_xy.yaml
 
 ## Detailed Docs
 
-- `model/doc/README.md`: canonical system, link, and routing table concepts.
-- `topologies/doc/README.md`: `topology:` YAML settings.
-- `routing/doc/README.md`: `routing:` YAML settings.
-- `benchmarks/doc/README.md`: `benchmark:` and `systems:` benchmark settings.
-- `plotting/doc/README.md`: `plot:` YAML settings.
-- `experiments/doc/README.md`: document loading and path behavior.
-- `simulators/doc/README.md`: simulator-backend selection concepts.
-- `simulators/booksim/doc/README.md`: `booksim:` settings and current BookSim limits.
+- [model/README.md](model/README.md): canonical system, link, and routing table concepts.
+- [topologies/README.md](topologies/README.md): `topology:` YAML settings and topology formulas.
+- [routing/README.md](routing/README.md): routing support matrix and `routing:` YAML settings.
+- [benchmarks/README.md](benchmarks/README.md): `benchmark:` and `systems:` benchmark settings.
+- [plotting/README.md](plotting/README.md): `plot:` YAML settings.
+- [experiments/README.md](experiments/README.md): document loading and path behavior.
+- [simulators/README.md](simulators/README.md): simulator-backend selection concepts.
+- [simulators/booksim/README.md](simulators/booksim/README.md): `booksim:` settings and current BookSim limits.

@@ -5,7 +5,11 @@ Benchmark YAML drives experiments over one or more systems.
 ```yaml
 benchmark:
   type: latency_vs_injection_rate
-  injection_rates: [0.01, 0.02, 0.04]
+  injection_rates:
+    range:
+      start: 0.001
+      stop: 0.1
+      step: 0.004
   injection_rate_unit: flits/node/cycle
   packet_size: 1
   traffic: uniform
@@ -37,8 +41,8 @@ Required:
 
 Optional:
 
-- `plot`: plot settings; see `plotting/doc/README.md`.
-- `booksim`: BookSim backend settings; see `simulators/booksim/doc/README.md`.
+- `plot`: plot settings; see `../plotting/README.md`.
+- `booksim`: BookSim backend settings; see `../simulators/booksim/README.md`.
 - `output_dir`: output root. Defaults to `runs`.
 
 ## `benchmark.type: latency_vs_injection_rate`
@@ -63,7 +67,11 @@ plots/latency_vs_injection.pdf
 ```yaml
 benchmark:
   type: latency_vs_injection_rate
-  injection_rates: [0.01, 0.02, 0.04]
+  injection_rates:
+    range:
+      start: 0.001
+      stop: 0.1
+      step: 0.004
   injection_rate_unit: flits/node/cycle
   packet_size: 1
   traffic: uniform
@@ -80,7 +88,7 @@ benchmark:
 Field reference:
 
 - `type`: must be `latency_vs_injection_rate`.
-- `injection_rates`: list of numeric injection-rate values. Required.
+- `injection_rates`: explicit list of numeric rates or a range specification. Required.
 - `injection_rate_unit`: `flits/node/cycle` or `packets/node/cycle`. Optional, default `packets/node/cycle`.
 - `packet_size`: packet size in flits. Optional, default `1`.
 - `traffic`: BookSim traffic pattern string. Optional, default `uniform`.
@@ -92,6 +100,44 @@ Field reference:
 - `vc_buffer_size`: BookSim `vc_buf_size`. Optional, default `8`.
 - `router_latency`: stored in options for future router models. Current BookSim anynet path does not lower it directly.
 - `timeout_seconds`: optional per-run subprocess timeout.
+
+### Injection Rate Lists And Ranges
+
+Explicit lists remain supported:
+
+```yaml
+injection_rates: [0.01, 0.02, 0.04]
+```
+
+For regular sweeps, use a stop-exclusive range:
+
+```yaml
+injection_rates:
+  range:
+    start: 0.001
+    stop: 0.1
+    step: 0.004
+```
+
+This expands like Python `range(start, stop, step)`, so the example above
+produces 25 rates from `0.001` through `0.097`.
+
+The compact quoted form is also accepted:
+
+```yaml
+injection_rates: "range(0.001, 0.1, 0.004)"
+```
+
+To include an exactly reachable endpoint, set `inclusive: true`:
+
+```yaml
+injection_rates:
+  range:
+    start: 0.01
+    stop: 0.05
+    step: 0.02
+    inclusive: true
+```
 
 ### Injection Rate Units
 
@@ -153,7 +199,7 @@ systems:
   - path: ../../systems/mesh2d/xy/mesh2d_16x16_xy.yaml
     case: mesh2d_16x16_short
     benchmark:
-      injection_rates: [0.01, 0.02, 0.04]
+      injection_rates: "range(0.01, 0.05, 0.02)"
       timeout_seconds: 300
 ```
 

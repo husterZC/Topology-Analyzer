@@ -276,10 +276,13 @@ class AnyNetTableExporter:
         }
 
 
-def _coord_sort_key(coord: object) -> tuple[int, int]:
-    if isinstance(coord, (list, tuple)) and len(coord) == 2:
-        return int(coord[1]), int(coord[0])
-    return 0, 0
+def _coord_sort_key(coord: object) -> tuple[int, ...]:
+    if isinstance(coord, (list, tuple)):
+        try:
+            return tuple(int(value) for value in reversed(coord))
+        except (TypeError, ValueError):
+            return (0,)
+    return (0,)
 
 
 def _route_for_terminal(
@@ -298,10 +301,10 @@ def _route_for_terminal(
                 vc = int(route.get("vc", 0))
                 return next_hop, vc
 
-    next_hop = system.routing_table.next_hop(current, destination_router)
-    if next_hop is None:
+    route = system.routing_table.next_hop_with_vc(current, destination_router)
+    if route is None:
         raise ValueError(
             "missing next hop while exporting BookSim route table: "
             f"{current} -> {destination_router}"
         )
-    return next_hop, system.routing_table.route_vcs.get((current, destination_router), 0)
+    return route

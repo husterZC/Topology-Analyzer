@@ -79,6 +79,35 @@ For `mesh2d`, supported classes are:
 - `x`: horizontal mesh links.
 - `y`: vertical mesh links.
 
+For `mesh3d`, supported classes are:
+
+- `x`, `y`, `z`: nearest-neighbor links in each dimension.
+
+For `torus2d`, supported classes are:
+
+- `x`, `y`: non-wrap nearest-neighbor links.
+- `x_wrap`, `y_wrap`: wraparound links.
+
+For `torus3d`, supported classes are:
+
+- `x`, `y`, `z`: non-wrap nearest-neighbor links.
+- `x_wrap`, `y_wrap`, `z_wrap`: wraparound links.
+
+For `ruche3d`, supported classes are:
+
+- `x`, `y`, `z`: base 3D mesh links.
+- `ruche_x`, `ruche_y`, `ruche_z`: express links.
+
+For `hypercube`, supported classes are:
+
+- `cube`: generic hypercube links.
+- `dim_<n>`: links in bit dimension `n`.
+
+For `dragonfly`, supported classes are:
+
+- `local`: intra-group links.
+- `global`: inter-group links.
+
 For `fattree`, supported classes are:
 
 - `up`: lower-level router to upper-level router.
@@ -102,8 +131,10 @@ links:
 
 Override fields:
 
-- `src`: endpoint coordinate for `mesh2d`, for example `[0, 0]`.
-- `dst`: endpoint coordinate.
+- `src`: endpoint coordinate or router ID. Mesh/Torus/Ruche coordinate examples
+  are `[0, 0]` and `[0, 0, 0]`; Fat-tree, Hypercube, and Dragonfly overrides
+  use router ID strings.
+- `dst`: endpoint coordinate or router ID.
 - `latency_cycles`: positive integer.
 - `bandwidth`: string metadata.
 - `directed`: optional boolean, default `false`.

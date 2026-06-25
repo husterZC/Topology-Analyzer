@@ -83,6 +83,11 @@ def _validate_vc_count(system: System, options: BookSimOptions) -> None:
     max_vc = max(
         [
             *system.routing_table.route_vcs.values(),
+            *(
+                hop_vc
+                for hop_vcs in system.routing_table.path_vcs.values()
+                for hop_vc in hop_vcs
+            ),
             *_terminal_route_vcs(system),
         ],
         default=0,

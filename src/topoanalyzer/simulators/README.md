@@ -35,7 +35,7 @@ approximating them.
 See:
 
 ```text
-simulators/booksim/doc/README.md
+booksim/README.md
 ```
 
 for the `booksim:` YAML settings, overlay instructions, and remaining lowering

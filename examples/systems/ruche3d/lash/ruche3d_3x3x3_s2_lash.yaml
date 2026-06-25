@@ -1,0 +1,29 @@
+name: ruche3d_3x3x3_s2_lash
+
+topology:
+  type: ruche3d
+  params:
+    x: 3
+    y: 3
+    z: 3
+    stride: 2
+
+links:
+  default:
+    latency_cycles: 1
+    bandwidth: 64GB/s
+  classes:
+    ruche_x:
+      latency_cycles: 2
+      bandwidth: 128GB/s
+    ruche_y:
+      latency_cycles: 2
+      bandwidth: 128GB/s
+    ruche_z:
+      latency_cycles: 2
+      bandwidth: 128GB/s
+
+routing:
+  type: ruche_lash
+  max_vcs: 8
+  candidate_paths: 8

@@ -6,7 +6,7 @@ from typing import Any, Iterable
 from topoanalyzer.model.validation import ValidationReport
 
 
-Coordinate = tuple[int, int]
+Coordinate = tuple[int, ...]
 
 
 @dataclass(frozen=True)
@@ -144,6 +144,6 @@ class LinkParameters:
 
 
 def _parse_endpoint(value: Any) -> Coordinate | str:
-    if isinstance(value, (list, tuple)) and len(value) == 2:
-        return (int(value[0]), int(value[1]))
+    if isinstance(value, (list, tuple)) and len(value) >= 2:
+        return tuple(int(item) for item in value)
     return str(value)
