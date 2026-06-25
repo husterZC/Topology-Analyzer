@@ -1,0 +1,17 @@
+name: mesh2d_4x4_graph_lash
+
+topology:
+  type: mesh2d
+  params:
+    x: 4
+    y: 4
+
+links:
+  default:
+    latency_cycles: 2
+    bandwidth: 64GB/s
+
+routing:
+  type: graph_lash
+  max_vcs: 4
+  candidate_paths: 8

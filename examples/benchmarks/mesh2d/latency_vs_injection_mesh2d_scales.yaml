@@ -1,0 +1,31 @@
+benchmark:
+  type: latency_vs_injection_rate
+  injection_rates: [0.01, 0.02, 0.04, 0.08, 0.12, 0.16, 0.20]
+  injection_rate_unit: flits/node/cycle
+  packet_size: 1
+  traffic: uniform
+  warmup_cycles: 3
+  sample_cycles: 5000
+  max_samples: 10
+  repetitions: 1
+  num_vcs: 2
+  vc_buffer_size: 8
+  router_latency: 1
+  timeout_seconds: 120
+
+plot:
+  y_scale: log
+  emit_companion_plot: true
+
+systems:
+  - path: ../../systems/mesh2d/xy/mesh2d_2x2_xy.yaml
+  - path: ../../systems/mesh2d/xy/mesh2d_4x4_xy.yaml
+  - path: ../../systems/mesh2d/xy/mesh2d_8x8_xy.yaml
+  - path: ../../systems/mesh2d/xy/mesh2d_16x16_xy.yaml
+    benchmark:
+      injection_rates: [0.01, 0.02, 0.04]
+
+booksim:
+  executable: booksim
+
+output_dir: runs

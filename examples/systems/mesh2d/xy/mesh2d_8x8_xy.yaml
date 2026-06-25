@@ -1,0 +1,15 @@
+name: mesh2d_8x8_xy
+
+topology:
+  type: mesh2d
+  params:
+    x: 8
+    y: 8
+
+links:
+  default:
+    latency_cycles: 1
+    bandwidth: 64GB/s
+
+routing:
+  type: mesh_xy

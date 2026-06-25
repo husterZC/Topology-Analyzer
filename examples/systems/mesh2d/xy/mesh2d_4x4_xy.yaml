@@ -1,0 +1,16 @@
+name: mesh2d_4x4_xy
+
+topology:
+  type: mesh2d
+  params:
+    x: 4
+    y: 4
+    concentration: 1
+
+links:
+  default:
+    latency_cycles: 1
+    bandwidth: 64GB/s
+
+routing:
+  type: mesh_xy

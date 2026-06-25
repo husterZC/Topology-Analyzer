@@ -1,0 +1,16 @@
+name: mesh2d_2x2_graph_updown
+
+topology:
+  type: mesh2d
+  params:
+    x: 2
+    y: 2
+
+links:
+  default:
+    latency_cycles: 2
+    bandwidth: 64GB/s
+
+routing:
+  type: graph_updown
+  root: r.0.0
