@@ -34,6 +34,9 @@ freedom through the VC-aware channel dependency graph.
 | `dragonfly` | `dragonfly_min` | Minimal local/global/local routing with VC phase split. |
 | `dragonfly` | `dragonfly_valiant_hash` | Static VALg-style hashed intermediate-group routing. |
 | `dragonfly` and most connected graphs | `graph_updown`, `graph_lash` | Generic graph baselines; runtime UGAL/PAR are not table routes. |
+| `slimnoc` | `slimnoc_min` | Paper-faithful static shortest-path routing with VC phase split. |
+| `slimnoc` | `slimnoc_valiant_hash` | Static Valiant-style hashed intermediate-router routing. |
+| `slimnoc` and most connected graphs | `graph_updown`, `graph_lash` | Generic graph baselines; runtime UGAL is not a table route. |
 | `fattree` | `fattree_lca` | Simple deterministic nearest-common-ancestor baseline. |
 | `fattree` | `fattree_nca_hash` | Balanced static ECMP-style nearest-common-ancestor baseline. |
 | `fattree` | `fattree_dmodk` | Deterministic D-mod-k-style modulo baseline. |
@@ -272,6 +275,59 @@ benchmark:
 True UGAL, PAR, and far-end-congestion-aware Dragonfly algorithms need runtime
 queue/credit state and should be implemented as BookSim runtime routing
 backends.
+
+</details>
+
+<details>
+<summary><code>slimnoc_min</code>: static minimum routing for <code>slimnoc</code></summary>
+
+```yaml
+routing:
+  type: slimnoc_min
+```
+
+Behavior:
+
+1. Build shortest paths over the SlimNoC router graph.
+2. Use the deterministic first shortest path in sorted router order.
+3. Use VC `0` on the first hop of two-hop routes.
+4. Use VC `1` on direct routes and final hops.
+
+This is the paper-faithful baseline: SlimNoC evaluates static minimum routing
+with Dijkstra-style shortest paths to keep router complexity and power low.
+Benchmarks should use at least `num_vcs: 2`.
+
+</details>
+
+<details>
+<summary><code>slimnoc_valiant_hash</code>: static Valiant-style routing for <code>slimnoc</code></summary>
+
+```yaml
+routing:
+  type: slimnoc_valiant_hash
+  seed: 0
+```
+
+Behavior:
+
+1. Select a deterministic hashed intermediate router.
+2. Route source-to-intermediate with a direct or two-hop SlimNoC path.
+3. Route intermediate-to-destination with a direct or two-hop SlimNoC path.
+4. Use four monotonic VC phases:
+   - VC `0`: first hop toward the intermediate router.
+   - VC `1`: final hop toward the intermediate router.
+   - VC `2`: first hop from intermediate router to destination router.
+   - VC `3`: final hop from intermediate router to destination router.
+
+Benchmarks using this static route table need at least:
+
+```yaml
+benchmark:
+  num_vcs: 4
+```
+
+This is a repeatable static baseline for non-minimal load spreading. True UGAL-L
+or UGAL-G needs runtime queue-state support in a BookSim routing backend.
 
 </details>
 

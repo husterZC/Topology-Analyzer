@@ -24,9 +24,10 @@ builds a BFS spanning tree and emits conservative up*/down* routes. `graph_lash`
 keeps shortest candidate paths where possible and assigns routes to virtual
 channel layers so each layer's channel dependency graph stays acyclic. Built-in
 regular topologies include 2D/3D mesh, 2D/3D torus, 3D ruche, Hypercube,
-Dragonfly, and Fat-tree. Ruche, Hypercube, and Dragonfly include stronger
-static candidates such as LASH-style VC routing and Valiant/VALg-style hashed
-intermediate routing. Fat-tree systems can use topology-specific
+Dragonfly, SlimNoC, and Fat-tree. Ruche, Hypercube, Dragonfly, and SlimNoC
+include stronger static candidates such as LASH-style VC routing and
+Valiant/VALg-style hashed intermediate routing. Fat-tree systems can use
+topology-specific
 `fattree_lca` routing as a simple baseline or `fattree_nca_hash` routing as the
 recommended balanced static baseline. The Fat-tree package also includes
 `fattree_dmodk`, `fattree_dmodc`, and BookSim-runtime `fattree_anca`.
@@ -36,7 +37,7 @@ recommended balanced static baseline. The Fat-tree package also includes
 ```text
 src/topoanalyzer/
   model/              canonical graph, link, routing, and system objects
-  topologies/         topology builders such as mesh2d, torus3d, dragonfly
+  topologies/         topology builders such as mesh2d, torus3d, slimnoc
   routing/            routing-table generators and deadlock checks
   simulators/booksim/ BookSim config generation, execution, and parsing
   benchmarks/         reusable benchmark runners

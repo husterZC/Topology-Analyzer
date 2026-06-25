@@ -10,6 +10,7 @@ from topoanalyzer.topologies.dragonfly import DragonflyParams, DragonflyTopology
 from topoanalyzer.topologies.hypercube import HypercubeParams, HypercubeTopologyBuilder
 from topoanalyzer.topologies.mesh3d import Mesh3DParams, Mesh3DTopologyBuilder
 from topoanalyzer.topologies.ruche3d import Ruche3DParams, Ruche3DTopologyBuilder
+from topoanalyzer.topologies.slimnoc import SlimNoCParams, SlimNoCTopologyBuilder
 from topoanalyzer.topologies.torus2d import Torus2DParams, Torus2DTopologyBuilder
 from topoanalyzer.topologies.torus3d import Torus3DParams, Torus3DTopologyBuilder
 
@@ -90,6 +91,58 @@ class TopologyExpansionTests(unittest.TestCase):
         )
         self.assertTrue(graph.is_connected())
 
+    def test_builds_slimnoc_q5_paper_scale(self):
+        graph = SlimNoCTopologyBuilder().build(
+            SlimNoCParams(q=5, concentration=4, layout="subgroup"),
+            _links(),
+        )
+
+        self.assertEqual(len(graph.routers()), 50)
+        self.assertEqual(len(graph.links), 350)
+        self.assertEqual(graph.metadata["network_radix"], 7)
+        self.assertEqual(graph.metadata["radix"], 11)
+        self.assertEqual(graph.metadata["terminal_count"], 200)
+        self.assertEqual(
+            len([link for link in graph.links if link.metadata["class"] == "intra_0"]),
+            50,
+        )
+        self.assertEqual(
+            len([link for link in graph.links if link.metadata["class"] == "intra_1"]),
+            50,
+        )
+        self.assertEqual(
+            len([link for link in graph.links if link.metadata["class"] == "cross"]),
+            250,
+        )
+        self.assertTrue(graph.is_connected())
+
+    def test_builds_slimnoc_q9_nonprime_field_paper_scale(self):
+        graph = SlimNoCTopologyBuilder().build(
+            SlimNoCParams(q=9, concentration=8, layout="group"),
+            _links(),
+        )
+
+        self.assertEqual(len(graph.routers()), 162)
+        self.assertEqual(len(graph.links), 2106)
+        self.assertEqual(graph.metadata["field"]["characteristic"], 3)
+        self.assertEqual(graph.metadata["field"]["degree"], 2)
+        self.assertEqual(graph.metadata["network_radix"], 13)
+        self.assertEqual(graph.metadata["terminal_count"], 1296)
+        self.assertTrue(graph.is_connected())
+
+    def test_builds_slimnoc_q8_power_of_two_paper_scale(self):
+        graph = SlimNoCTopologyBuilder().build(
+            SlimNoCParams(q=8, concentration=8, layout="subgroup"),
+            _links(),
+        )
+
+        self.assertEqual(len(graph.routers()), 128)
+        self.assertEqual(len(graph.links), 1536)
+        self.assertEqual(graph.metadata["delta"], 0)
+        self.assertEqual(graph.metadata["network_radix"], 12)
+        self.assertEqual(graph.metadata["terminal_count"], 1024)
+        self.assertTrue(graph.is_connected())
+
     def test_new_topology_systems_validate(self):
         cases = [
             ("mesh3d", {"x": 2, "y": 2, "z": 2}, "mesh_xyz"),
@@ -102,6 +155,7 @@ class TopologyExpansionTests(unittest.TestCase):
             ),
             ("hypercube", {"dimension": 4}, "hypercube_ecube"),
             ("dragonfly", {"p": 2, "a": 4, "h": 2}, "dragonfly_min"),
+            ("slimnoc", {"q": 5, "concentration": 4}, "slimnoc_min"),
         ]
 
         for topology_type, params, routing_type in cases:
@@ -162,6 +216,12 @@ class TopologyExpansionTests(unittest.TestCase):
                 {"type": "dragonfly_valiant_hash", "seed": 0},
                 {"global": {"latency_cycles": 3, "bandwidth": "128GB/s"}},
             ),
+            (
+                "slimnoc",
+                {"q": 5, "concentration": 4},
+                {"type": "slimnoc_valiant_hash", "seed": 0},
+                {"cross": {"latency_cycles": 2, "bandwidth": "128GB/s"}},
+            ),
         ]
 
         for topology_type, params, routing, classes in cases:
@@ -198,6 +258,47 @@ class TopologyExpansionTests(unittest.TestCase):
             }
         )
 
+        self.assertEqual(
+            max(vc for hop_vcs in system.routing_table.path_vcs.values() for vc in hop_vcs),
+            3,
+        )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with self.assertRaisesRegex(ValueError, "uses VC 3"):
+                BookSimBackend().materialize(
+                    system,
+                    BookSimOptions(traffic="uniform", injection_rate=0.01),
+                    Path(tmpdir) / "too_few_vcs",
+                )
+            BookSimBackend().materialize(
+                system,
+                BookSimOptions(traffic="uniform", injection_rate=0.01, num_vcs=4),
+                Path(tmpdir) / "four_vcs",
+            )
+            route_text = ((Path(tmpdir) / "four_vcs") / "anynet.routes").read_text(
+                encoding="utf-8"
+            )
+
+        self.assertIn(" 3\n", route_text)
+
+    def test_slimnoc_valiant_requires_exported_vcs(self):
+        system = build_system_from_dict(
+            {
+                "name": "slimnoc_q5_valiant",
+                "topology": {
+                    "type": "slimnoc",
+                    "params": {"q": 5, "concentration": 4},
+                },
+                "links": {
+                    "default": {"latency_cycles": 1, "bandwidth": "64GB/s"},
+                    "classes": {
+                        "cross": {"latency_cycles": 2, "bandwidth": "128GB/s"}
+                    },
+                },
+                "routing": {"type": "slimnoc_valiant_hash", "seed": 0},
+            }
+        )
+
+        self.assertEqual(system.routing_table.metadata["max_hops"], 4)
         self.assertEqual(
             max(vc for hop_vcs in system.routing_table.path_vcs.values() for vc in hop_vcs),
             3,

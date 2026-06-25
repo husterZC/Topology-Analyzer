@@ -32,6 +32,9 @@ examples/
       lash/          3D ruche systems with graph shortest-path VC routing
       valiant_hash/  3D ruche systems with static Valiant-style hashed routing
       xyz/           3D ruche systems with express-link XYZ routing
+    slimnoc/
+      min/           SlimNoC systems with static minimum routing
+      valiant_hash/  SlimNoC systems with static Valiant-style hashed routing
     torus2d/
       xy/            2D torus topology with conservative XY routing
     torus3d/
@@ -60,6 +63,10 @@ topoanalyzer validate examples/systems/hypercube/lash/hypercube_d4_lash.yaml
 topoanalyzer validate examples/systems/hypercube/valiant_hash/hypercube_d4_valiant_hash.yaml
 topoanalyzer validate examples/systems/dragonfly/min/dragonfly_p2_a4_h2_min.yaml
 topoanalyzer validate examples/systems/dragonfly/valiant_hash/dragonfly_p2_a4_h2_valiant_hash.yaml
+topoanalyzer validate examples/systems/slimnoc/min/slimnoc_q5_p4_min.yaml
+topoanalyzer validate examples/systems/slimnoc/min/slimnoc_q8_p8_min.yaml
+topoanalyzer validate examples/systems/slimnoc/min/slimnoc_q9_p8_min.yaml
+topoanalyzer validate examples/systems/slimnoc/valiant_hash/slimnoc_q5_p4_valiant_hash.yaml
 topoanalyzer validate examples/systems/mesh2d/graph_lash/mesh2d_4x4_graph_lash.yaml
 topoanalyzer validate examples/systems/mesh2d/graph_updown/mesh2d_4x4_graph_updown.yaml
 topoanalyzer benchmark examples/benchmarks/mesh2d/latency_vs_injection_mesh2d_scales.yaml --dry-run

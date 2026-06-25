@@ -28,6 +28,10 @@ from topoanalyzer.routing.ruche_valiant_hash import (
     Ruche3DValiantHashRoutingGenerator,
 )
 from topoanalyzer.routing.ruche_xyz import Ruche3DXYZRoutingGenerator
+from topoanalyzer.routing.slimnoc_min import SlimNoCMinimalRoutingGenerator
+from topoanalyzer.routing.slimnoc_valiant_hash import (
+    SlimNoCValiantHashRoutingGenerator,
+)
 from topoanalyzer.routing.torus_xy import Torus2DXYRoutingGenerator
 from topoanalyzer.routing.torus_xyz import Torus3DXYZRoutingGenerator
 from topoanalyzer.topologies.dragonfly import DragonflyParams, DragonflyTopologyBuilder
@@ -36,6 +40,7 @@ from topoanalyzer.topologies.hypercube import HypercubeParams, HypercubeTopology
 from topoanalyzer.topologies.mesh2d import Mesh2DParams, Mesh2DTopologyBuilder
 from topoanalyzer.topologies.mesh3d import Mesh3DParams, Mesh3DTopologyBuilder
 from topoanalyzer.topologies.ruche3d import Ruche3DParams, Ruche3DTopologyBuilder
+from topoanalyzer.topologies.slimnoc import SlimNoCParams, SlimNoCTopologyBuilder
 from topoanalyzer.topologies.torus2d import Torus2DParams, Torus2DTopologyBuilder
 from topoanalyzer.topologies.torus3d import Torus3DParams, Torus3DTopologyBuilder
 
@@ -70,6 +75,9 @@ def build_system_from_dict(data: dict[str, Any]) -> System:
     elif topology_type == "dragonfly":
         topology_params = DragonflyParams.from_dict(topology_spec["params"])
         topology_builder = DragonflyTopologyBuilder()
+    elif topology_type == "slimnoc":
+        topology_params = SlimNoCParams.from_dict(topology_spec["params"])
+        topology_builder = SlimNoCTopologyBuilder()
     elif topology_type == "fattree":
         topology_params = FatTreeParams.from_dict(topology_spec["params"])
         topology_builder = FatTreeTopologyBuilder()
@@ -115,6 +123,12 @@ def build_system_from_dict(data: dict[str, Any]) -> System:
         routing_generator = DragonflyValiantHashRoutingGenerator(
             seed=int(routing_spec.get("seed", 0)),
             nonminimal_same_group=bool(routing_spec.get("nonminimal_same_group", False)),
+        )
+    elif routing_type == "slimnoc_min":
+        routing_generator = SlimNoCMinimalRoutingGenerator()
+    elif routing_type == "slimnoc_valiant_hash":
+        routing_generator = SlimNoCValiantHashRoutingGenerator(
+            seed=int(routing_spec.get("seed", 0)),
         )
     elif routing_type == "fattree_lca":
         routing_generator = FatTreeLCARoutingGenerator()

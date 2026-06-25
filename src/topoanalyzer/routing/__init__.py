@@ -21,6 +21,10 @@ from topoanalyzer.routing.ruche_valiant_hash import (
     Ruche3DValiantHashRoutingGenerator,
 )
 from topoanalyzer.routing.ruche_xyz import Ruche3DXYZRoutingGenerator
+from topoanalyzer.routing.slimnoc_min import SlimNoCMinimalRoutingGenerator
+from topoanalyzer.routing.slimnoc_valiant_hash import (
+    SlimNoCValiantHashRoutingGenerator,
+)
 from topoanalyzer.routing.torus_xy import Torus2DXYRoutingGenerator
 from topoanalyzer.routing.torus_xyz import Torus3DXYZRoutingGenerator
 
@@ -42,6 +46,8 @@ __all__ = [
     "Ruche3DLashRoutingGenerator",
     "Ruche3DValiantHashRoutingGenerator",
     "Ruche3DXYZRoutingGenerator",
+    "SlimNoCMinimalRoutingGenerator",
+    "SlimNoCValiantHashRoutingGenerator",
     "Torus2DXYRoutingGenerator",
     "Torus3DXYZRoutingGenerator",
 ]
