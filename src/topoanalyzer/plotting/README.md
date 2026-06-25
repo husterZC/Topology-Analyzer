@@ -58,6 +58,9 @@ plot:
 This limit is applied to both the primary plot and the companion plot when
 `emit_companion_plot` is true.
 
+For linear y-axis plots, the displayed range is `0..y_max`. For log y-axis
+plots, the upper bound is `y_max` and the lower bound remains positive.
+
 ### `emit_companion_plot`
 
 When true, the benchmark runner also writes the opposite y-axis scale.

@@ -85,10 +85,10 @@ class LatencyPlotTests(unittest.TestCase):
             "Injection rate (flits/node/cycle)",
         )
 
-    def test_y_limits_for_max_keeps_requested_linear_top(self):
+    def test_y_limits_for_max_uses_zero_bottom_for_linear_axis(self):
         self.assertEqual(
             _y_limits_for_max(100.0, False, [10.0, 20.0], 5.0),
-            (5.0, 100.0),
+            (0.0, 100.0),
         )
 
     def test_y_limits_for_max_keeps_log_bottom_below_top(self):

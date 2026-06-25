@@ -148,9 +148,7 @@ def _y_limits_for_max(
         if bottom >= y_max:
             bottom = y_max / 10.0
         return bottom, y_max
-    if current_bottom >= y_max:
-        return 0.0, y_max
-    return current_bottom, y_max
+    return 0.0, y_max
 
 
 def _parse_float(value: str | None) -> float | None:
