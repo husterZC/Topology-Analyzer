@@ -22,6 +22,13 @@ make bootstrap
 source .venv/bin/activate
 ```
 
+Python 3.10 or newer is required. If your cluster's default `python3` is too
+old, choose an interpreter explicitly:
+
+```bash
+make bootstrap BOOTSTRAP_PYTHON=python3.11
+```
+
 Run a dry benchmark first:
 
 ```bash

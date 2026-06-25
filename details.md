@@ -72,6 +72,22 @@ make bootstrap
 source .venv/bin/activate
 ```
 
+Python 3.10 or newer is required. `make bootstrap` auto-prefers `python3.12`,
+`python3.11`, then `python3.10`. If your cluster's default `python3` is older,
+choose an interpreter explicitly:
+
+```bash
+make bootstrap BOOTSTRAP_PYTHON=python3.11
+```
+
+If a previous failed bootstrap created `.venv` with an older Python, remove it
+and rerun:
+
+```bash
+rm -rf .venv
+make bootstrap BOOTSTRAP_PYTHON=python3.11
+```
+
 `make bootstrap` creates `.venv`, installs Topology-Analyzer in editable mode,
 clones BookSim2 into `external/booksim2`, applies the `anynet` route-table
 overlay, builds BookSim, and links the resulting binary as:

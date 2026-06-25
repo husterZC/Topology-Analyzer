@@ -1,10 +1,12 @@
 .PHONY: help bootstrap python-env install install-dev test booksim-fetch booksim-apply-overlay booksim-build booksim-link clean-runs clean-build clean
 
-BOOTSTRAP_PYTHON ?= python3
+BOOTSTRAP_PYTHON ?= $(shell command -v python3.12 2>/dev/null || command -v python3.11 2>/dev/null || command -v python3.10 2>/dev/null || command -v python3 2>/dev/null || command -v python 2>/dev/null)
 VENV ?= .venv
 PYTHON ?= $(VENV)/bin/python
 PIP ?= $(PYTHON) -m pip
 PIP_CACHE_DIR ?= .cache/pip
+ABS_PIP_CACHE_DIR := $(abspath $(PIP_CACHE_DIR))
+MIN_PYTHON ?= 3.10
 BOOKSIM_REPO ?= https://github.com/booksim/booksim2.git
 BOOKSIM_DIR ?= external/booksim2
 BOOKSIM_BIN ?= $(BOOKSIM_DIR)/src/booksim
@@ -33,9 +35,11 @@ help:
 	@echo "  make clean        Run clean-runs and clean-build"
 	@echo ""
 	@echo "Variables:"
-	@echo "  BOOTSTRAP_PYTHON=python3  Host Python used to create .venv"
+	@echo "  BOOTSTRAP_PYTHON=<auto>   Host Python used to create .venv"
+	@echo "                            Auto-prefers python3.12, 3.11, 3.10"
 	@echo "  VENV=.venv                Virtual environment directory"
 	@echo "  PIP_CACHE_DIR=.cache/pip  Repo-local pip cache"
+	@echo "  MIN_PYTHON=3.10           Minimum supported Python version"
 	@echo "  BOOKSIM_REPO=...          BookSim2 git URL"
 	@echo "  BOOKSIM_DIR=...           BookSim2 checkout/build directory"
 
@@ -49,11 +53,20 @@ bootstrap: install-dev booksim-link
 	@echo "  $(LOCAL_BOOKSIM)"
 
 python-env:
-	@test -x "$(PYTHON)" || "$(BOOTSTRAP_PYTHON)" -m venv "$(VENV)"
-	PIP_CACHE_DIR="$(PIP_CACHE_DIR)" $(PIP) install --upgrade pip setuptools wheel
+	@test -n "$(BOOTSTRAP_PYTHON)" || (echo "No Python interpreter found. Set BOOTSTRAP_PYTHON=/path/to/python$(MIN_PYTHON)+" && exit 1)
+	@if [ -x "$(PYTHON)" ]; then \
+		"$(PYTHON)" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)' || (echo "Existing $(PYTHON) is older than Python $(MIN_PYTHON). Remove $(VENV) or set VENV=... and rerun make bootstrap." && exit 1); \
+	else \
+		"$(BOOTSTRAP_PYTHON)" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)' || (echo "$(BOOTSTRAP_PYTHON) is older than Python $(MIN_PYTHON). Set BOOTSTRAP_PYTHON=python3.10, python3.11, or python3.12." && exit 1); \
+		"$(BOOTSTRAP_PYTHON)" -m venv "$(VENV)"; \
+	fi
+	mkdir -p "$(ABS_PIP_CACHE_DIR)"
+	@test -w "$(ABS_PIP_CACHE_DIR)" || (echo "PIP_CACHE_DIR is not writable: $(ABS_PIP_CACHE_DIR)" && exit 1)
+	@$(PYTHON) -c 'import os, pathlib, sys; path = pathlib.Path("$(ABS_PIP_CACHE_DIR)"); raise SystemExit(0 if path.stat().st_uid == os.getuid() else 1)' || (echo "PIP_CACHE_DIR is not owned by the current user: $(ABS_PIP_CACHE_DIR). Remove .cache or set PIP_CACHE_DIR=/path/you/own." && exit 1)
+	PIP_CACHE_DIR="$(ABS_PIP_CACHE_DIR)" $(PIP) install --upgrade pip setuptools wheel
 
 install: python-env
-	PIP_CACHE_DIR="$(PIP_CACHE_DIR)" $(PIP) install -e .
+	PIP_CACHE_DIR="$(ABS_PIP_CACHE_DIR)" $(PIP) install -e .
 
 install-dev: install
 

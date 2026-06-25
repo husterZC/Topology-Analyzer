@@ -40,6 +40,13 @@ make bootstrap
 source .venv/bin/activate
 ```
 
+Python 3.10 or newer is required. If `python3` points to an older interpreter,
+run:
+
+```bash
+make bootstrap BOOTSTRAP_PYTHON=python3.11
+```
+
 `make bootstrap` clones BookSim2 into `external/booksim2`, applies the
 Topology-Analyzer overlay, builds BookSim, and links the binary into
 `.venv/bin/booksim` and `bin/booksim`. When YAML uses `executable: booksim`,
