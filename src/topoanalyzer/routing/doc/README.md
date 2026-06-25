@@ -31,10 +31,10 @@ Behavior:
 Use this when:
 
 - the topology is `mesh2d`,
-- you want BookSim stock mesh support,
 - you want the usual research baseline for 2D mesh.
 
-Current BookSim lowering maps this to:
+The default BookSim backend exports this as a table-driven `anynet` route table.
+The optional `stock_mesh` backend maps it to:
 
 ```text
 routing_function = dor;
@@ -107,7 +107,8 @@ Important notes:
 
 - If the selected path set is already acyclic, `graph_lash` may use only one VC.
 - `max_vcs` is a hard limit. If routing fails, increase `max_vcs` or `candidate_paths`.
-- Stock BookSim lowering does not yet simulate `graph_lash` tables directly.
+- Benchmark `num_vcs` must be greater than the largest VC used by the generated table.
+- Use the default BookSim `anynet_table` backend for direct simulation.
 
 ## Route Table Validation
 

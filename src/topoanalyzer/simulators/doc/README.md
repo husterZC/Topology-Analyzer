@@ -6,6 +6,7 @@ implemented backend today is BookSim.
 ```yaml
 booksim:
   executable: booksim
+  backend: anynet_table
 ```
 
 The benchmark runner uses simulator backends for three operations:
@@ -19,12 +20,12 @@ The benchmark runner uses simulator backends for three operations:
 The internal system model is not a simulator config. Simulator backends lower a
 validated `System` into backend-specific input files.
 
-This matters because the model may support features the current backend cannot
-lower yet. For example:
+This matters because each backend has an explicit lowering contract. The default
+BookSim `anynet_table` backend lowers:
 
-- heterogeneous mesh link latency,
-- rectangular mesh in stock BookSim config,
-- arbitrary routing tables such as `graph_lash`.
+- arbitrary router graphs accepted by BookSim `anynet`,
+- per-directed-router-link latency,
+- deterministic routing tables, including VC selection.
 
 Backends must reject unsupported features explicitly instead of silently
 approximating them.
@@ -37,4 +38,5 @@ See:
 simulators/booksim/doc/README.md
 ```
 
-for the `booksim:` YAML settings and current lowering limitations.
+for the `booksim:` YAML settings, overlay instructions, and remaining lowering
+limits.

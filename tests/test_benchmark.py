@@ -47,6 +47,24 @@ class BenchmarkTests(unittest.TestCase):
                 ).exists()
             )
             self.assertTrue(
+                (
+                    output
+                    / "booksim"
+                    / "mesh2d_2x2_xy"
+                    / "inj_0.010000_rep_0"
+                    / "anynet.net"
+                ).exists()
+            )
+            self.assertTrue(
+                (
+                    output
+                    / "booksim"
+                    / "mesh2d_2x2_xy"
+                    / "inj_0.010000_rep_0"
+                    / "anynet.routes"
+                ).exists()
+            )
+            self.assertTrue(
                 (output / "results" / "latency_vs_injection.csv").exists()
             )
             csv_text = (output / "results" / "latency_vs_injection.csv").read_text(

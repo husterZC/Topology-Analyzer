@@ -1,0 +1,182 @@
+--- a/src/booksim_config.cpp
++++ b/src/booksim_config.cpp
+@@ -314,6 +314,7 @@
+ 
+   //==================Network file===========================
+   AddStrField("network_file","");
++  AddStrField("route_table_file","");
+ }
+ 
+ 
+--- a/src/networks/anynet.hpp
++++ b/src/networks/anynet.hpp
+@@ -34,21 +34,24 @@
+ #include <string>
+ #include <map>
+ #include <list>
++#include <utility>
+ 
+ class AnyNet : public Network {
+ 
+   string file_name;
+   //associtation between  nodes and routers
+   map<int, int > node_list;
++  string route_table_file;
+   //[link type][src router][dest router]=(port, latency)
+   vector<map<int,  map<int, pair<int,int> > > > router_list;
+   //stores minimal routing information from every router to every node
+-  //[router][dest_node]=port
+-  vector<map<int, int> > routing_table;
++  //[router][dest_node]=(port, vc)
++  vector<map<int, pair<int, int> > > routing_table;
+ 
+   void _ComputeSize( const Configuration &config );
+   void _BuildNet( const Configuration &config );
+   void readFile();
++  void readRoutingTableFile();
+   void buildRoutingTable();
+   void route(int r_start);
+ 
+--- a/src/networks/anynet.cpp
++++ b/src/networks/anynet.cpp
+@@ -56,7 +56,8 @@
+ #include <limits>
+ #include <algorithm>
+ //this is a hack, I can't easily get the routing talbe out of the network
+-map<int, int>* global_routing_table;
++map<int, pair<int, int> >* global_routing_table;
++map<int, int>* global_node_list;
+ 
+ AnyNet::AnyNet( const Configuration &config, const string & name )
+   :  Network( config, name ){
+@@ -79,6 +80,7 @@
+ 
+ void AnyNet::_ComputeSize( const Configuration &config ){
+   file_name = config.GetStr("network_file");
++  route_table_file = config.GetStr("route_table_file");
+   if(file_name==""){
+     cout<<"No network file name provided"<<endl;
+     exit(-1);
+@@ -214,11 +216,7 @@
+ void min_anynet( const Router *r, const Flit *f, int in_channel, 
+ 		 OutputSet *outputs, bool inject ){
+   int out_port=-1;
+-  if(!inject){
+-    assert(global_routing_table[r->GetID()].count(f->dest)!=0);
+-    out_port=global_routing_table[r->GetID()][f->dest];
+-  }
+- 
++  int route_vc=-1;
+ 
+   int vcBegin = 0, vcEnd = gNumVCs-1;
+   if ( f->type == Flit::READ_REQUEST ) {
+@@ -234,6 +232,23 @@
+     vcBegin = gWriteReplyBeginVC;
+     vcEnd   = gWriteReplyEndVC;
+   }
++  if(inject){
++    if(global_node_list && global_node_list->count(f->src) != 0) {
++      int src_router = (*global_node_list)[f->src];
++      if(global_routing_table[src_router].count(f->dest) != 0) {
++	route_vc = global_routing_table[src_router][f->dest].second;
++      }
++    }
++  } else {
++    assert(global_routing_table[r->GetID()].count(f->dest)!=0);
++    out_port=global_routing_table[r->GetID()][f->dest].first;
++    route_vc=global_routing_table[r->GetID()][f->dest].second;
++  }
++  if(route_vc >= 0) {
++    assert(route_vc < gNumVCs);
++    vcBegin = route_vc;
++    vcEnd = route_vc;
++  }
+ 
+   outputs->Clear( );
+ 
+@@ -243,10 +258,60 @@
+ void AnyNet::buildRoutingTable(){
+   cout<<"========================== Routing table  =====================\n";  
+   routing_table.resize(_size);
+-  for(int i = 0; i<_size; i++){
+-    route(i);
++  if(route_table_file != ""){
++    readRoutingTableFile();
++  } else {
++    for(int i = 0; i<_size; i++){
++      route(i);
++    }
+   }
+   global_routing_table = &routing_table[0];
++  global_node_list = &node_list;
++}
++
++void AnyNet::readRoutingTableFile(){
++  ifstream route_table;
++  string line;
++  route_table.open(route_table_file.c_str());
++  if(!route_table.is_open()){
++    cout<<"Anynet:can't open route table file "<<route_table_file<<endl;
++    exit(-1);
++  }
++  while(!route_table.eof()){
++    getline(route_table,line);
++    if(line=="" || line[0]=='#'){
++      continue;
++    }
++    istringstream line_stream(line);
++    int router=-1;
++    int dest_node=-1;
++    int port=-1;
++    int vc=0;
++    if(!(line_stream >> router >> dest_node >> port >> vc)){
++      cout<<"Anynet:Incomplete route-table line: "<<line<<endl;
++      assert(false);
++    }
++    if(router < 0 || router >= _size){
++      cout<<"Anynet:Route-table router out of range "<<router<<endl;
++      assert(false);
++    }
++    if(node_list.count(dest_node) == 0){
++      cout<<"Anynet:Route-table destination node unknown "<<dest_node<<endl;
++      assert(false);
++    }
++    if(port < 0 || vc < 0){
++      cout<<"Anynet:Route-table port and vc must be non-negative "<<line<<endl;
++      assert(false);
++    }
++    routing_table[router][dest_node]=pair<int, int>(port, vc);
++  }
++  for(int router = 0; router < _size; router++){
++    for(map<int, int>::iterator node = node_list.begin();
++	node != node_list.end();
++	node++){
++      assert(routing_table[router].count(node->first) != 0);
++    }
++  }
+ }
+ 
+ 
+@@ -295,7 +360,7 @@
+       for(map<int, pair<int, int> >::iterator iter = router_list[0][i].begin();
+ 	  iter!=router_list[0][i].end();
+ 	  iter++){
+-	routing_table[r_start][iter->first]=iter->second.first;
++	routing_table[r_start][iter->first]=pair<int, int>(iter->second.first, 0);
+ 	//cout<<"node "<<iter->first<<" port "<< iter->second.first<<endl;
+       }
+     } else {
+@@ -313,7 +378,7 @@
+       for(map<int, pair<int,int> >::iterator iter = router_list[0][i].begin();
+ 	  iter!=router_list[0][i].end();
+ 	  iter++){
+-	routing_table[r_start][iter->first]=port;
++	routing_table[r_start][iter->first]=pair<int, int>(port, 0);
+ 	//cout<<"node "<<iter->first<<" port "<< port<<" dist "<<distance<<endl;
+       }
+     }
+@@ -498,4 +563,3 @@
+   }
+   
+ }
+-

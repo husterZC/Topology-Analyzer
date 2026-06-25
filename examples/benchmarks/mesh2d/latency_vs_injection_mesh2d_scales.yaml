@@ -27,5 +27,6 @@ systems:
 
 booksim:
   executable: booksim
+  backend: anynet_table
 
 output_dir: runs

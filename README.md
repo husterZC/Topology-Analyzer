@@ -13,10 +13,10 @@ Topology type
 ```
 
 That system can then be validated, exported, or lowered into a simulator backend.
-The first implemented path is:
+The default implemented BookSim path is:
 
 ```text
-2D mesh + heterogeneous-capable link model + XY routing + BookSim latency sweep
+System graph + generated routing table + custom BookSim anynet/table backend
 ```
 
 The repository also includes graph-based routing generators. `graph_updown`
@@ -72,6 +72,8 @@ Useful Make targets:
 ```bash
 make help
 make test
+make booksim-apply-overlay BOOKSIM_DIR=/path/to/booksim2
+make booksim-build BOOKSIM_DIR=/path/to/booksim2
 make clean-runs
 make clean-build
 make clean
@@ -104,13 +106,14 @@ validation.json
 topoanalyzer benchmark examples/benchmarks/mesh2d/latency_vs_injection_mesh2d.yaml --dry-run
 ```
 
-Dry-run mode creates the run directory and BookSim config files without launching
+Dry-run mode creates the run directory and BookSim input files without launching
 BookSim.
 
 ## Run A BookSim Sweep
 
 Make sure the configured BookSim binary exists on `PATH`, or set the executable
-in the benchmark YAML.
+in the benchmark YAML. The default `anynet_table` backend requires the BookSim2
+overlay in [booksim_overlays/booksim2](</scratch2/chi/SoftHier_porj/codex/Topology-Analyzer/booksim_overlays/booksim2/README.md>).
 
 ```bash
 topoanalyzer benchmark examples/benchmarks/mesh2d/latency_vs_injection_mesh2d.yaml
@@ -170,6 +173,9 @@ runs/<run-name>/
     validation.json
   booksim/<case-name>/inj_<rate>_rep_<n>/
     booksim.cfg
+    anynet.net
+    anynet.routes
+    anynet_mapping.json
     stdout.txt
     stderr.txt
   results/
@@ -227,24 +233,48 @@ Resolution order is:
 pair override > link class/orientation > default
 ```
 
-## Current BookSim Backend Limitations
+## BookSim Backend
 
-The internal model supports rectangular meshes and heterogeneous links. The
-initial stock BookSim adapter only lowers square 2D meshes with homogeneous
-channel latency and homogeneous bandwidth metadata, because standard BookSim
-mesh configs expose one `k` and one global `channel_latency`.
+`booksim.backend` defaults to `anynet_table`.
 
-For heterogeneous links or rectangular meshes, the model and validation still
-work, but the current BookSim adapter reports an unsupported-feature error. The
-next backend step is to add generated/custom BookSim topology code for those
-cases.
+```yaml
+booksim:
+  executable: /path/to/booksim
+  backend: anynet_table
+```
 
-The same limitation applies to graph-generated routing tables such as
-`graph_updown` and `graph_lash`: the generated routing table is validated and
-exported by Topology-Analyzer, but stock BookSim config generation currently
-only lowers `mesh_xy` to `routing_function = dor`. Simulating arbitrary routing
-tables requires a custom BookSim routing function or a table-driven BookSim
-backend.
+For every system, this backend writes:
+
+- `anynet.net`: arbitrary router graph for BookSim `topology = anynet`.
+- `anynet.routes`: deterministic table-driven routes, including VC selection.
+- `anynet_mapping.json`: router, terminal, link, latency, and bandwidth metadata.
+- `booksim.cfg`: config pointing at those generated files.
+
+This removes the old stock-mesh blockers for rectangular meshes, heterogeneous
+router-link latency, and graph-generated routing tables such as `graph_updown`
+and `graph_lash`.
+
+Before running BookSim, apply the overlay:
+
+```bash
+patch -p1 -d /path/to/booksim2 < booksim_overlays/booksim2/table_anynet.patch
+make -C /path/to/booksim2/src
+```
+
+The legacy stock mesh backend is still available for comparison:
+
+```yaml
+booksim:
+  backend: stock_mesh
+```
+
+That compatibility backend is intentionally narrow: square `mesh2d`, `mesh_xy`,
+homogeneous 1-cycle links.
+
+Remaining limitation: BookSim2 `FlitChannel` exposes per-link latency but not a
+native per-link bandwidth field. Topology-Analyzer preserves bandwidth in
+`anynet_mapping.json`; modeling true per-edge bandwidth needs a deeper BookSim
+channel-model extension.
 
 `graph_lash` is intended as the better general-topology static-routing baseline:
 it tries shortest/simple candidate paths and places each route into the lowest

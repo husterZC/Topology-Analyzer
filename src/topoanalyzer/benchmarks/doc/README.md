@@ -23,6 +23,7 @@ systems:
 
 booksim:
   executable: booksim
+  backend: anynet_table
 
 output_dir: runs
 ```
@@ -89,7 +90,7 @@ Field reference:
 - `repetitions`: number of repetitions per injection rate. Optional, default `1`.
 - `num_vcs`: BookSim `num_vcs`. Optional, default `2`.
 - `vc_buffer_size`: BookSim `vc_buf_size`. Optional, default `8`.
-- `router_latency`: stored in options for future backends. Current BookSim config path does not lower it directly.
+- `router_latency`: stored in options for future router models. Current BookSim anynet path does not lower it directly.
 - `timeout_seconds`: optional per-run subprocess timeout.
 
 ### Injection Rate Units
@@ -198,6 +199,9 @@ runs/<run-name>/
     validation.json
   booksim/<case-name>/inj_<rate>_rep_<n>/
     booksim.cfg
+    anynet.net
+    anynet.routes
+    anynet_mapping.json
     stdout.txt
     stderr.txt
   results/

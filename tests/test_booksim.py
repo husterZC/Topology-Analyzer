@@ -1,6 +1,9 @@
 import unittest
+import tempfile
+from pathlib import Path
 
 from topoanalyzer.experiments.factory import build_system_from_dict
+from topoanalyzer.simulators.booksim.backend import BookSimBackend
 from topoanalyzer.simulators.booksim.config import (
     BookSimConfigGenerator,
     BookSimOptions,
@@ -22,17 +25,18 @@ def _system(x=4, y=4, links=None):
 
 
 class BookSimTests(unittest.TestCase):
-    def test_generates_square_mesh_config(self):
+    def test_generates_anynet_table_config_by_default(self):
         config = BookSimConfigGenerator().generate(
             _system(),
             BookSimOptions(traffic="uniform", injection_rate=0.05),
+            network_file="/tmp/anynet.net",
+            route_table_file="/tmp/anynet.routes",
         )
 
-        self.assertIn("topology = mesh;", config)
-        self.assertIn("k = 4;", config)
-        self.assertIn("n = 2;", config)
-        self.assertIn("routing_function = dor;", config)
-        self.assertIn("use_noc_latency = 1;", config)
+        self.assertIn("topology = anynet;", config)
+        self.assertIn("routing_function = min;", config)
+        self.assertIn("network_file = /tmp/anynet.net;", config)
+        self.assertIn("route_table_file = /tmp/anynet.routes;", config)
         self.assertIn("injection_rate_uses_flits = 0;", config)
 
     def test_generates_flit_rate_config(self):
@@ -44,15 +48,29 @@ class BookSimTests(unittest.TestCase):
                 injection_rate_unit="flits/node/cycle",
                 packet_size=5,
             ),
+            network_file="/tmp/anynet.net",
+            route_table_file="/tmp/anynet.routes",
         )
 
         self.assertIn("injection_rate = 0.05;", config)
         self.assertIn("packet_size = 5;", config)
         self.assertIn("injection_rate_uses_flits = 1;", config)
 
+    def test_generates_stock_mesh_config_when_requested(self):
+        config = BookSimConfigGenerator(backend="stock_mesh").generate(
+            _system(),
+            BookSimOptions(traffic="uniform", injection_rate=0.05),
+        )
+
+        self.assertIn("topology = mesh;", config)
+        self.assertIn("k = 4;", config)
+        self.assertIn("n = 2;", config)
+        self.assertIn("routing_function = dor;", config)
+        self.assertIn("use_noc_latency = 1;", config)
+
     def test_rejects_rectangular_stock_mesh(self):
         with self.assertRaises(BookSimUnsupportedError):
-            BookSimConfigGenerator().generate(
+            BookSimConfigGenerator(backend="stock_mesh").generate(
                 _system(x=4, y=2),
                 BookSimOptions(traffic="uniform", injection_rate=0.05),
             )
@@ -68,7 +86,7 @@ class BookSimTests(unittest.TestCase):
             }
         )
         with self.assertRaises(BookSimUnsupportedError):
-            BookSimConfigGenerator().generate(
+            BookSimConfigGenerator(backend="stock_mesh").generate(
                 system,
                 BookSimOptions(traffic="uniform", injection_rate=0.05),
             )
@@ -78,12 +96,12 @@ class BookSimTests(unittest.TestCase):
             links={"default": {"latency_cycles": 2, "bandwidth": "64GB/s"}}
         )
         with self.assertRaises(BookSimUnsupportedError):
-            BookSimConfigGenerator().generate(
+            BookSimConfigGenerator(backend="stock_mesh").generate(
                 system,
                 BookSimOptions(traffic="uniform", injection_rate=0.05),
             )
 
-    def test_rejects_graph_updown_routing_until_custom_backend_exists(self):
+    def test_custom_backend_materializes_graph_updown_routes(self):
         system = build_system_from_dict(
             {
                 "name": "mesh2d_4x4_graph_updown",
@@ -92,11 +110,45 @@ class BookSimTests(unittest.TestCase):
                 "routing": {"type": "graph_updown", "root": "r.0.0"},
             }
         )
-        with self.assertRaises(BookSimUnsupportedError):
-            BookSimConfigGenerator().generate(
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = BookSimBackend().materialize(
                 system,
                 BookSimOptions(traffic="uniform", injection_rate=0.05),
+                Path(tmpdir),
             )
+            config = config_path.read_text(encoding="utf-8")
+
+            self.assertIn("topology = anynet;", config)
+            self.assertIn("route_table_file =", config)
+            self.assertTrue((Path(tmpdir) / "anynet.net").exists())
+            route_table = (Path(tmpdir) / "anynet.routes").read_text(encoding="utf-8")
+            self.assertIn("0 15", route_table)
+
+    def test_custom_backend_materializes_rectangular_heterogeneous_mesh(self):
+        system = _system(
+            x=4,
+            y=2,
+            links={
+                "default": {"latency_cycles": 2, "bandwidth": "64GB/s"},
+                "classes": {
+                    "x": {"latency_cycles": 2, "bandwidth": "64GB/s"},
+                    "y": {"latency_cycles": 5, "bandwidth": "16GB/s"},
+                },
+            },
+        )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            BookSimBackend().materialize(
+                system,
+                BookSimOptions(traffic="uniform", injection_rate=0.05),
+                Path(tmpdir),
+            )
+            network = (Path(tmpdir) / "anynet.net").read_text(encoding="utf-8")
+            mapping = (Path(tmpdir) / "anynet_mapping.json").read_text(
+                encoding="utf-8"
+            )
+
+            self.assertIn("router 0 node 0 router 1 2 router 4 5", network)
+            self.assertIn('"bandwidth": "16GB/s"', mapping)
 
     def test_parses_common_metrics(self):
         metrics = parse_booksim_output(
@@ -110,6 +162,19 @@ class BookSimTests(unittest.TestCase):
         self.assertEqual(metrics.average_packet_latency, 12.5)
         self.assertEqual(metrics.average_network_latency, 8.0)
         self.assertEqual(metrics.accepted_rate, 0.045)
+
+    def test_parses_booksim_latency_output_labels(self):
+        metrics = parse_booksim_output(
+            """
+            Packet latency average = 16.9213
+            Network latency average = 16.7953
+            Accepted packet rate average = 0.0100319
+            """
+        )
+
+        self.assertEqual(metrics.average_packet_latency, 16.9213)
+        self.assertEqual(metrics.average_network_latency, 16.7953)
+        self.assertEqual(metrics.accepted_rate, 0.0100319)
 
 
 if __name__ == "__main__":

@@ -83,8 +83,10 @@ def _cmd_benchmark(
     benchmark = LatencyInjectionBenchmark.from_dict(spec["benchmark"])
     cases = _load_benchmark_cases(spec, benchmark_file.parent, benchmark)
     plot_settings = LatencyInjectionPlotSettings.from_dict(spec.get("plot"))
-    executable = booksim_executable or str(spec.get("booksim", {}).get("executable", "booksim"))
-    backend = BookSimBackend(executable=executable)
+    booksim_spec = spec.get("booksim", {})
+    executable = booksim_executable or str(booksim_spec.get("executable", "booksim"))
+    backend_name = str(booksim_spec.get("backend", "anynet_table"))
+    backend = BookSimBackend(executable=executable, backend=backend_name)
     output_root = Path(spec.get("output_dir", "runs"))
     runner = LatencyInjectionRunner(backend)
     output_dir = runner.run(

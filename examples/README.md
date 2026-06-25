@@ -8,7 +8,7 @@ examples/
     mesh2d/          benchmark specs that reference one or more systems
   systems/
     mesh2d/
-      xy/            BookSim-ready square 2D mesh systems with XY routing
+      xy/            2D mesh XY baseline systems
       graph_lash/    shortest-path graph routing with VC layers
       graph_updown/  graph-analyzed up*/down* routing table systems
       link_variants/ heterogeneous link parameter examples
