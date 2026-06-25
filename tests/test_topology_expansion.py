@@ -13,6 +13,7 @@ from topoanalyzer.topologies.ruche3d import Ruche3DParams, Ruche3DTopologyBuilde
 from topoanalyzer.topologies.slimnoc import SlimNoCParams, SlimNoCTopologyBuilder
 from topoanalyzer.topologies.torus2d import Torus2DParams, Torus2DTopologyBuilder
 from topoanalyzer.topologies.torus3d import Torus3DParams, Torus3DTopologyBuilder
+from topoanalyzer.topologies.ubmesh import UBMeshParams, UBMeshTopologyBuilder
 
 
 def _links():
@@ -143,6 +144,32 @@ class TopologyExpansionTests(unittest.TestCase):
         self.assertEqual(graph.metadata["terminal_count"], 1024)
         self.assertTrue(graph.is_connected())
 
+    def test_builds_ubmesh_8x8_paper_rack_scale(self):
+        graph = UBMeshTopologyBuilder().build(
+            UBMeshParams(dimensions=(8, 8), dimension_names=("x", "y")),
+            _links(),
+        )
+
+        self.assertEqual(len(graph.routers()), 64)
+        self.assertEqual(len(graph.links), 896)
+        self.assertEqual(graph.metadata["network_radix"], 14)
+        self.assertEqual(graph.metadata["diameter"], 2)
+        self.assertEqual(graph.metadata["terminal_count"], 64)
+        self.assertTrue(graph.is_connected())
+
+    def test_builds_ubmesh_8x8x4x4_paper_pod_scale(self):
+        graph = UBMeshTopologyBuilder().build(
+            UBMeshParams(dimensions=(8, 8, 4, 4), dimension_names=("x", "y", "z", "a")),
+            _links(),
+        )
+
+        self.assertEqual(len(graph.routers()), 1024)
+        self.assertEqual(len(graph.links), 20480)
+        self.assertEqual(graph.metadata["network_radix"], 20)
+        self.assertEqual(graph.metadata["diameter"], 4)
+        self.assertEqual(graph.metadata["terminal_count"], 1024)
+        self.assertTrue(graph.is_connected())
+
     def test_new_topology_systems_validate(self):
         cases = [
             ("mesh3d", {"x": 2, "y": 2, "z": 2}, "mesh_xyz"),
@@ -156,6 +183,11 @@ class TopologyExpansionTests(unittest.TestCase):
             ("hypercube", {"dimension": 4}, "hypercube_ecube"),
             ("dragonfly", {"p": 2, "a": 4, "h": 2}, "dragonfly_min"),
             ("slimnoc", {"q": 5, "concentration": 4}, "slimnoc_min"),
+            (
+                "ubmesh",
+                {"dimensions": [3, 3], "dimension_names": ["x", "y"]},
+                "ubmesh_dor",
+            ),
         ]
 
         for topology_type, params, routing_type in cases:
@@ -171,6 +203,45 @@ class TopologyExpansionTests(unittest.TestCase):
                             }
                         },
                         "routing": {"type": routing_type},
+                    }
+                )
+
+                self.assertTrue(system.validate().ok)
+
+    def test_ubmesh_routing_candidates_validate(self):
+        cases = [
+            {"type": "ubmesh_shortest"},
+            {"type": "ubmesh_dor", "dimension_order": [0, 1, 2]},
+            {"type": "ubmesh_apr_hash", "seed": 0},
+            {"type": "ubmesh_tfc", "seed": 0},
+            {"type": "ubmesh_apr_runtime", "seed": 0},
+        ]
+
+        for routing in cases:
+            with self.subTest(routing=routing["type"]):
+                system = build_system_from_dict(
+                    {
+                        "name": f"ubmesh_{routing['type']}",
+                        "topology": {
+                            "type": "ubmesh",
+                            "params": {
+                                "dimensions": [3, 3, 2],
+                                "dimension_names": ["x", "y", "z"],
+                            },
+                        },
+                        "links": {
+                            "default": {
+                                "latency_cycles": 1,
+                                "bandwidth": "64GB/s",
+                            },
+                            "classes": {
+                                "z": {
+                                    "latency_cycles": 2,
+                                    "bandwidth": "32GB/s",
+                                }
+                            },
+                        },
+                        "routing": routing,
                     }
                 )
 

@@ -30,7 +30,8 @@ class BookSimBackend:
         run_dir: Path,
     ) -> Path:
         run_dir.mkdir(parents=True, exist_ok=True)
-        if self.config_generator.resolved_backend(system) == "anynet_table":
+        backend = self.config_generator.resolved_backend(system)
+        if backend == "anynet_table":
             _validate_vc_count(system, options)
             artifacts = self.anynet_exporter.materialize(system, run_dir)
             config = self.config_generator.generate(
@@ -38,6 +39,13 @@ class BookSimBackend:
                 options,
                 network_file=artifacts.network_file.resolve(),
                 route_table_file=artifacts.route_table_file.resolve(),
+            )
+        elif backend == "ubmesh_apr_runtime":
+            artifacts = self.anynet_exporter.materialize_network(system, run_dir)
+            config = self.config_generator.generate(
+                system,
+                options,
+                network_file=artifacts.network_file.resolve(),
             )
         else:
             config = self.config_generator.generate(system, options)

@@ -27,6 +27,11 @@ from topoanalyzer.routing.slimnoc_valiant_hash import (
 )
 from topoanalyzer.routing.torus_xy import Torus2DXYRoutingGenerator
 from topoanalyzer.routing.torus_xyz import Torus3DXYZRoutingGenerator
+from topoanalyzer.routing.ubmesh_apr_hash import UBMeshAPRHashRoutingGenerator
+from topoanalyzer.routing.ubmesh_apr_runtime import UBMeshAPRRuntimeRoutingGenerator
+from topoanalyzer.routing.ubmesh_dor import UBMeshDORRoutingGenerator
+from topoanalyzer.routing.ubmesh_shortest import UBMeshShortestRoutingGenerator
+from topoanalyzer.routing.ubmesh_tfc import UBMeshTFCRoutingGenerator
 
 __all__ = [
     "DragonflyMinimalRoutingGenerator",
@@ -50,4 +55,9 @@ __all__ = [
     "SlimNoCValiantHashRoutingGenerator",
     "Torus2DXYRoutingGenerator",
     "Torus3DXYZRoutingGenerator",
+    "UBMeshAPRHashRoutingGenerator",
+    "UBMeshAPRRuntimeRoutingGenerator",
+    "UBMeshDORRoutingGenerator",
+    "UBMeshShortestRoutingGenerator",
+    "UBMeshTFCRoutingGenerator",
 ]

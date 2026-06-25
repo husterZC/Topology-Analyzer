@@ -39,6 +39,12 @@ examples/
       xy/            2D torus topology with conservative XY routing
     torus3d/
       xyz/           3D torus topology with conservative XYZ routing
+    ubmesh/
+      apr_hash/      UBMesh systems with static APR-style hashed detours
+      apr_runtime/   UBMesh systems using BookSim runtime APR
+      dor/           UBMesh deterministic dimension-order baseline systems
+      shortest/      UBMesh minimum-hop latency-ordered systems
+      tfc/           UBMesh systems with static two-VL TFC approximation
 ```
 
 Benchmark system paths are relative to the benchmark YAML file location.
@@ -67,6 +73,11 @@ topoanalyzer validate examples/systems/slimnoc/min/slimnoc_q5_p4_min.yaml
 topoanalyzer validate examples/systems/slimnoc/min/slimnoc_q8_p8_min.yaml
 topoanalyzer validate examples/systems/slimnoc/min/slimnoc_q9_p8_min.yaml
 topoanalyzer validate examples/systems/slimnoc/valiant_hash/slimnoc_q5_p4_valiant_hash.yaml
+topoanalyzer validate examples/systems/ubmesh/shortest/ubmesh_8x8_shortest.yaml
+topoanalyzer validate examples/systems/ubmesh/dor/ubmesh_8x8_dor.yaml
+topoanalyzer validate examples/systems/ubmesh/apr_hash/ubmesh_8x8_apr_hash.yaml
+topoanalyzer validate examples/systems/ubmesh/tfc/ubmesh_8x8_tfc.yaml
+topoanalyzer validate examples/systems/ubmesh/apr_runtime/ubmesh_8x8_apr_runtime.yaml
 topoanalyzer validate examples/systems/mesh2d/graph_lash/mesh2d_4x4_graph_lash.yaml
 topoanalyzer validate examples/systems/mesh2d/graph_updown/mesh2d_4x4_graph_updown.yaml
 topoanalyzer benchmark examples/benchmarks/mesh2d/latency_vs_injection_mesh2d_scales.yaml --dry-run

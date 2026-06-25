@@ -37,6 +37,12 @@ freedom through the VC-aware channel dependency graph.
 | `slimnoc` | `slimnoc_min` | Paper-faithful static shortest-path routing with VC phase split. |
 | `slimnoc` | `slimnoc_valiant_hash` | Static Valiant-style hashed intermediate-router routing. |
 | `slimnoc` and most connected graphs | `graph_updown`, `graph_lash` | Generic graph baselines; runtime UGAL is not a table route. |
+| `ubmesh` | `ubmesh_shortest` | Minimum-hop nD-FullMesh baseline with latency-ordered dimension fixes. |
+| `ubmesh` | `ubmesh_dor` | Deterministic dimension-order baseline. |
+| `ubmesh` | `ubmesh_apr_hash` | Static APR-style hashed detour baseline. |
+| `ubmesh` | `ubmesh_apr_runtime` | BookSim runtime APR marker; not exported as static `anynet.routes`. |
+| `ubmesh` | `ubmesh_tfc` | Static two-VL TFC approximation for UBMesh APR paths. |
+| `ubmesh` and most connected graphs | `graph_updown`, `graph_lash` | Generic graph baselines when UBMesh-specific routes are not desired. |
 | `fattree` | `fattree_lca` | Simple deterministic nearest-common-ancestor baseline. |
 | `fattree` | `fattree_nca_hash` | Balanced static ECMP-style nearest-common-ancestor baseline. |
 | `fattree` | `fattree_dmodk` | Deterministic D-mod-k-style modulo baseline. |
@@ -328,6 +334,121 @@ benchmark:
 
 This is a repeatable static baseline for non-minimal load spreading. True UGAL-L
 or UGAL-G needs runtime queue-state support in a BookSim routing backend.
+
+</details>
+
+<details>
+<summary><code>ubmesh_shortest</code>: minimum-hop UBMesh baseline</summary>
+
+```yaml
+routing:
+  type: ubmesh_shortest
+```
+
+Behavior:
+
+1. Route over the nD-FullMesh graph with one direct hop for each differing
+   coordinate.
+2. At each hop, choose the remaining destination dimension with the lowest
+   modeled direct-link latency.
+3. Assign increasing VC phases by hop index so heterogeneous latency choices
+   cannot introduce cyclic static channel dependencies.
+
+Benchmarks should use at least `num_vcs` equal to the UBMesh diameter.
+
+</details>
+
+<details>
+<summary><code>ubmesh_dor</code>: deterministic dimension-order UBMesh routing</summary>
+
+```yaml
+routing:
+  type: ubmesh_dor
+  dimension_order: [0, 1, 2, 3]
+```
+
+Behavior:
+
+1. Fix dimensions in the configured order, defaulting to ascending index order.
+2. Use one direct full-mesh hop per differing coordinate.
+3. Assign all channels to VC `0`.
+
+This is the simplest deterministic UBMesh baseline.
+
+</details>
+
+<details>
+<summary><code>ubmesh_apr_hash</code>: static APR-style detour routing</summary>
+
+```yaml
+routing:
+  type: ubmesh_apr_hash
+  seed: 0
+```
+
+Behavior:
+
+1. Select a deterministic hashed detour router.
+2. Route source-to-detour with UBMesh DOR on VC `0`.
+3. Route detour-to-destination with UBMesh DOR on VC `1`.
+4. Reject detours that would visit the final destination early or repeat a
+   router.
+
+This is a static, table-exportable approximation of APR's all-path load
+spreading. Benchmarks should use at least `num_vcs: 2`.
+
+</details>
+
+<details>
+<summary><code>ubmesh_apr_runtime</code>: BookSim runtime APR routing</summary>
+
+```yaml
+routing:
+  type: ubmesh_apr_runtime
+  seed: 0
+```
+
+This routing type validates the UBMesh graph with representative DOR paths but
+is not lowered through `anynet.routes`. Use:
+
+```yaml
+booksim:
+  backend: auto
+```
+
+The generated BookSim config uses:
+
+```text
+topology = anynet;
+routing_function = ubmesh_apr;
+network_file = <generated anynet.net>;
+```
+
+This path is intended for a BookSim build that provides a runtime
+`ubmesh_apr` routing function capable of choosing among minimal and detour
+candidates using live simulator state. It requires at least two VCs/VLs for the
+TFC policy.
+
+</details>
+
+<details>
+<summary><code>ubmesh_tfc</code>: static two-VL TFC approximation</summary>
+
+```yaml
+routing:
+  type: ubmesh_tfc
+  seed: 0
+```
+
+Behavior:
+
+1. Use the same hashed APR-style detour path as `ubmesh_apr_hash`.
+2. Assign VC `0` to the source-to-detour segment.
+3. Assign VC `1` to the detour-to-destination segment.
+
+The UBMesh paper states that TFC uses two virtual lanes, but does not publish
+the full TFC algorithmic detail. This generator is a conservative static
+approximation for table-driven experiments.
 
 </details>
 

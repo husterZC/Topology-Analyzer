@@ -38,10 +38,10 @@ Fat-tree systems use the same shape with topology-specific parameters. For
 benchmarking, prefer `fattree_nca_hash` over `fattree_lca` because it spreads
 equal-cost upward routes across the Fat-tree. Other Fat-tree routing options
 include `fattree_dmodk`, `fattree_dmodc`, and BookSim-runtime `fattree_anca`.
-Ruche, Hypercube, Dragonfly, and SlimNoC systems also include stronger static
-candidates such as `ruche_lash`, `ruche_valiant_hash`, `hypercube_lash`,
-`hypercube_valiant_hash`, `dragonfly_valiant_hash`, and
-`slimnoc_valiant_hash`.
+Ruche, Hypercube, Dragonfly, SlimNoC, and UBMesh systems also include stronger
+static candidates such as `ruche_lash`, `ruche_valiant_hash`,
+`hypercube_lash`, `hypercube_valiant_hash`, `dragonfly_valiant_hash`,
+`slimnoc_valiant_hash`, `ubmesh_apr_hash`, and `ubmesh_tfc`.
 
 ```yaml
 name: fattree_r8_l4_nca_hash

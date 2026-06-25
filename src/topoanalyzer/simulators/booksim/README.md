@@ -44,10 +44,13 @@ booksim:
 
 Supported values:
 
-- `auto`: choose `stock_fattree` for `fattree_anca`, otherwise use `anynet_table`.
+- `auto`: choose `stock_fattree` for `fattree_anca`,
+  `ubmesh_apr_runtime` for `ubmesh_apr_runtime`, otherwise use `anynet_table`.
 - `anynet_table`: default custom backend. Emits BookSim `anynet` topology plus a generated route table.
 - `stock_mesh`: legacy compatibility backend for stock BookSim mesh experiments.
 - `stock_fattree`: native BookSim Fat-tree backend for `fattree_anca`.
+- `ubmesh_apr_runtime`: BookSim `anynet` topology plus a runtime
+  `ubmesh_apr` routing function for `ubmesh_apr_runtime`.
 
 ## Generated Config
 
@@ -228,6 +231,38 @@ homogeneous link bandwidth metadata
 Use `anynet_table` for `fattree_nca_hash`, `fattree_dmodk`, and
 `fattree_dmodc`.
 
+## Runtime `ubmesh_apr_runtime` Backend
+
+For:
+
+```yaml
+booksim:
+  backend: auto
+```
+
+with:
+
+```yaml
+routing:
+  type: ubmesh_apr_runtime
+```
+
+the backend writes `anynet.net`, `anynet_mapping.json`, and a `booksim.cfg`
+without `anynet.routes`:
+
+```text
+topology = anynet;
+routing_function = ubmesh_apr;
+network_file = <generated anynet.net>;
+ubmesh_apr_dimensions = <comma-separated dimensions>;
+ubmesh_apr_seed = <seed>;
+ubmesh_apr_vl_policy = tfc_two_virtual_lanes;
+```
+
+This path is for a BookSim build that implements a runtime `ubmesh_apr`
+routing function. Unlike `ubmesh_apr_hash` and `ubmesh_tfc`, it is not a static
+route table. The generated config requires at least `num_vcs: 2`.
+
 Unsupported examples:
 
 ```yaml
@@ -267,7 +302,7 @@ The default backend now covers arbitrary graph lowering, per-link latency, and
 table-driven routing. Remaining work:
 
 - true per-link bandwidth in BookSim channel behavior,
-- true adaptive routing functions that can inspect runtime credit or queue
-  state, for example ANCA-style Fat-tree routing,
+- additional true adaptive routing functions that can inspect runtime credit or
+  queue state, for example UGAL-style Dragonfly routing,
 - optional directed-only links if a future topology needs one-way channels,
 - richer parser support for additional BookSim output modes.

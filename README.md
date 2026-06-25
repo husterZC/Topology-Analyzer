@@ -24,9 +24,9 @@ builds a BFS spanning tree and emits conservative up*/down* routes. `graph_lash`
 keeps shortest candidate paths where possible and assigns routes to virtual
 channel layers so each layer's channel dependency graph stays acyclic. Built-in
 regular topologies include 2D/3D mesh, 2D/3D torus, 3D ruche, Hypercube,
-Dragonfly, SlimNoC, and Fat-tree. Ruche, Hypercube, Dragonfly, and SlimNoC
-include stronger static candidates such as LASH-style VC routing and
-Valiant/VALg-style hashed intermediate routing. Fat-tree systems can use
+Dragonfly, SlimNoC, UBMesh, and Fat-tree. Ruche, Hypercube, Dragonfly, SlimNoC,
+and UBMesh include stronger static candidates such as LASH-style VC routing and
+Valiant/VALg/APR-style hashed intermediate routing. Fat-tree systems can use
 topology-specific
 `fattree_lca` routing as a simple baseline or `fattree_nca_hash` routing as the
 recommended balanced static baseline. The Fat-tree package also includes

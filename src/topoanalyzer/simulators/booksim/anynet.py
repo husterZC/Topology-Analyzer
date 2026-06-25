@@ -17,6 +17,12 @@ class AnyNetArtifacts:
 
 
 @dataclass(frozen=True)
+class AnyNetNetworkArtifacts:
+    network_file: Path
+    mapping_file: Path
+
+
+@dataclass(frozen=True)
 class TerminalMapping:
     terminal_id: int
     router_id: str
@@ -60,6 +66,33 @@ class AnyNetTableExporter:
             encoding="utf-8",
         )
         return AnyNetArtifacts(network_file, route_table_file, mapping_file)
+
+    def materialize_network(
+        self,
+        system: System,
+        run_dir: Path,
+    ) -> AnyNetNetworkArtifacts:
+        run_dir.mkdir(parents=True, exist_ok=True)
+        network_file = run_dir / "anynet.net"
+        mapping_file = run_dir / "anynet_mapping.json"
+
+        router_ids = self.router_ids(system)
+        router_index = {router_id: index for index, router_id in enumerate(router_ids)}
+        terminals = self.terminal_mappings(system, router_ids)
+
+        network_file.write_text(
+            self.network_text(system, router_ids, router_index, terminals),
+            encoding="utf-8",
+        )
+        mapping_file.write_text(
+            json.dumps(
+                self.mapping(system, router_ids, router_index, terminals),
+                indent=2,
+                sort_keys=True,
+            ),
+            encoding="utf-8",
+        )
+        return AnyNetNetworkArtifacts(network_file, mapping_file)
 
     def router_ids(self, system: System) -> list[str]:
         routers = [node for node in system.graph.routers()]

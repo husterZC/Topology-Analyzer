@@ -1,0 +1,21 @@
+name: ubmesh_8x8_apr_hash
+topology:
+  type: ubmesh
+  params:
+    dimensions: [8, 8]
+    dimension_names: [x, y]
+    concentration: 1
+links:
+  default:
+    latency_cycles: 1
+    bandwidth: 64GB/s
+  classes:
+    x:
+      latency_cycles: 1
+      bandwidth: 64GB/s
+    y:
+      latency_cycles: 1
+      bandwidth: 64GB/s
+routing:
+  type: ubmesh_apr_hash
+  seed: 0

@@ -1,0 +1,27 @@
+name: ubmesh_8x8x4x4_apr_runtime
+topology:
+  type: ubmesh
+  params:
+    dimensions: [8, 8, 4, 4]
+    dimension_names: [x, y, z, a]
+    concentration: 1
+links:
+  default:
+    latency_cycles: 1
+    bandwidth: 64GB/s
+  classes:
+    x:
+      latency_cycles: 1
+      bandwidth: 64GB/s
+    y:
+      latency_cycles: 1
+      bandwidth: 64GB/s
+    z:
+      latency_cycles: 2
+      bandwidth: 64GB/s
+    a:
+      latency_cycles: 2
+      bandwidth: 64GB/s
+routing:
+  type: ubmesh_apr_runtime
+  seed: 0

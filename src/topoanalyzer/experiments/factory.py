@@ -34,6 +34,11 @@ from topoanalyzer.routing.slimnoc_valiant_hash import (
 )
 from topoanalyzer.routing.torus_xy import Torus2DXYRoutingGenerator
 from topoanalyzer.routing.torus_xyz import Torus3DXYZRoutingGenerator
+from topoanalyzer.routing.ubmesh_apr_hash import UBMeshAPRHashRoutingGenerator
+from topoanalyzer.routing.ubmesh_apr_runtime import UBMeshAPRRuntimeRoutingGenerator
+from topoanalyzer.routing.ubmesh_dor import UBMeshDORRoutingGenerator
+from topoanalyzer.routing.ubmesh_shortest import UBMeshShortestRoutingGenerator
+from topoanalyzer.routing.ubmesh_tfc import UBMeshTFCRoutingGenerator
 from topoanalyzer.topologies.dragonfly import DragonflyParams, DragonflyTopologyBuilder
 from topoanalyzer.topologies.fattree import FatTreeParams, FatTreeTopologyBuilder
 from topoanalyzer.topologies.hypercube import HypercubeParams, HypercubeTopologyBuilder
@@ -43,6 +48,7 @@ from topoanalyzer.topologies.ruche3d import Ruche3DParams, Ruche3DTopologyBuilde
 from topoanalyzer.topologies.slimnoc import SlimNoCParams, SlimNoCTopologyBuilder
 from topoanalyzer.topologies.torus2d import Torus2DParams, Torus2DTopologyBuilder
 from topoanalyzer.topologies.torus3d import Torus3DParams, Torus3DTopologyBuilder
+from topoanalyzer.topologies.ubmesh import UBMeshParams, UBMeshTopologyBuilder
 
 
 def build_system_from_dict(data: dict[str, Any]) -> System:
@@ -78,6 +84,9 @@ def build_system_from_dict(data: dict[str, Any]) -> System:
     elif topology_type == "slimnoc":
         topology_params = SlimNoCParams.from_dict(topology_spec["params"])
         topology_builder = SlimNoCTopologyBuilder()
+    elif topology_type == "ubmesh":
+        topology_params = UBMeshParams.from_dict(topology_spec["params"])
+        topology_builder = UBMeshTopologyBuilder()
     elif topology_type == "fattree":
         topology_params = FatTreeParams.from_dict(topology_spec["params"])
         topology_builder = FatTreeTopologyBuilder()
@@ -130,6 +139,24 @@ def build_system_from_dict(data: dict[str, Any]) -> System:
         routing_generator = SlimNoCValiantHashRoutingGenerator(
             seed=int(routing_spec.get("seed", 0)),
         )
+    elif routing_type == "ubmesh_shortest":
+        routing_generator = UBMeshShortestRoutingGenerator()
+    elif routing_type == "ubmesh_dor":
+        routing_generator = UBMeshDORRoutingGenerator(
+            dimension_order=_parse_dimension_order(routing_spec.get("dimension_order")),
+        )
+    elif routing_type == "ubmesh_apr_hash":
+        routing_generator = UBMeshAPRHashRoutingGenerator(
+            seed=int(routing_spec.get("seed", 0)),
+        )
+    elif routing_type == "ubmesh_apr_runtime":
+        routing_generator = UBMeshAPRRuntimeRoutingGenerator(
+            seed=int(routing_spec.get("seed", 0)),
+        )
+    elif routing_type == "ubmesh_tfc":
+        routing_generator = UBMeshTFCRoutingGenerator(
+            seed=int(routing_spec.get("seed", 0)),
+        )
     elif routing_type == "fattree_lca":
         routing_generator = FatTreeLCARoutingGenerator()
     elif routing_type == "fattree_nca_hash":
@@ -166,3 +193,9 @@ def build_system_from_dict(data: dict[str, Any]) -> System:
     )
     system.validate().raise_if_errors()
     return system
+
+
+def _parse_dimension_order(value: Any) -> tuple[int, ...] | None:
+    if value is None:
+        return None
+    return tuple(int(item) for item in value)

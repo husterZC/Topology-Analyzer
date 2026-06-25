@@ -7,6 +7,7 @@ from topoanalyzer.topologies.ruche3d import Ruche3DParams, Ruche3DTopologyBuilde
 from topoanalyzer.topologies.slimnoc import SlimNoCParams, SlimNoCTopologyBuilder
 from topoanalyzer.topologies.torus2d import Torus2DParams, Torus2DTopologyBuilder
 from topoanalyzer.topologies.torus3d import Torus3DParams, Torus3DTopologyBuilder
+from topoanalyzer.topologies.ubmesh import UBMeshParams, UBMeshTopologyBuilder
 
 __all__ = [
     "DragonflyParams",
@@ -27,4 +28,6 @@ __all__ = [
     "Torus2DTopologyBuilder",
     "Torus3DParams",
     "Torus3DTopologyBuilder",
+    "UBMeshParams",
+    "UBMeshTopologyBuilder",
 ]

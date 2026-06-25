@@ -150,6 +150,61 @@ class BookSimTests(unittest.TestCase):
             self.assertIn("router 0 node 0 router 1 2 router 4 5", network)
             self.assertIn('"bandwidth": "16GB/s"', mapping)
 
+    def test_runtime_ubmesh_apr_backend_materializes_without_route_table(self):
+        system = build_system_from_dict(
+            {
+                "name": "ubmesh_3x3_apr_runtime",
+                "topology": {
+                    "type": "ubmesh",
+                    "params": {
+                        "dimensions": [3, 3],
+                        "dimension_names": ["x", "y"],
+                    },
+                },
+                "links": {
+                    "default": {"latency_cycles": 1, "bandwidth": "64GB/s"},
+                },
+                "routing": {"type": "ubmesh_apr_runtime", "seed": 7},
+            }
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = BookSimBackend(backend="auto").materialize(
+                system,
+                BookSimOptions(traffic="uniform", injection_rate=0.01, num_vcs=2),
+                Path(tmpdir),
+            )
+            config = config_path.read_text(encoding="utf-8")
+
+            self.assertIn("routing_function = ubmesh_apr;", config)
+            self.assertIn("ubmesh_apr_dimensions = 3,3;", config)
+            self.assertIn("ubmesh_apr_seed = 7;", config)
+            self.assertTrue((Path(tmpdir) / "anynet.net").exists())
+            self.assertTrue((Path(tmpdir) / "anynet_mapping.json").exists())
+            self.assertFalse((Path(tmpdir) / "anynet.routes").exists())
+
+    def test_runtime_ubmesh_apr_rejects_single_vc(self):
+        system = build_system_from_dict(
+            {
+                "name": "ubmesh_3x3_apr_runtime",
+                "topology": {
+                    "type": "ubmesh",
+                    "params": {"dimensions": [3, 3]},
+                },
+                "links": {
+                    "default": {"latency_cycles": 1, "bandwidth": "64GB/s"},
+                },
+                "routing": {"type": "ubmesh_apr_runtime"},
+            }
+        )
+
+        with self.assertRaisesRegex(BookSimUnsupportedError, "at least two VCs"):
+            BookSimConfigGenerator(backend="auto").generate(
+                system,
+                BookSimOptions(traffic="uniform", injection_rate=0.01, num_vcs=1),
+                network_file="/tmp/anynet.net",
+            )
+
     def test_parses_common_metrics(self):
         metrics = parse_booksim_output(
             """
