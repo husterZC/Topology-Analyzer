@@ -23,6 +23,9 @@ These formulas describe the graph models implemented in this repository.
 - `b_x`, `b_y`, `b_z`: one-way bandwidth for links in each dimension.
 - `R`: router count.
 - `N`: terminal/end-node count represented by graph metadata.
+- For Dragonfly formulas, `p` is terminals per router, `a` is routers per
+  group, `h` is global links per router, and `g` is group count. In YAML, `g`
+  is configured with the `groups` field.
 - Diameter is router-hop diameter. Terminal injection/ejection hops are not
   modeled as graph links.
 - Bisection bandwidth is one-way aggregate bandwidth across a balanced router
@@ -323,10 +326,24 @@ topology:
 
 Parameters:
 
-- `p`: terminals per router. Required, positive integer.
-- `a`: routers per group. Required, integer greater than `1`.
-- `h`: global links per router. Required, positive integer.
-- `groups`: number of groups. Optional, default `a*h + 1`.
+| Symbol | YAML field | Meaning | Constraint |
+|---|---|---|---|
+| `p` | `p` | Concentration: terminal/end nodes attached to each router. | Positive integer. |
+| `a` | `a` | Routers per group. Each group is modeled as an all-to-all local clique of `a` routers. | Integer greater than `1`. |
+| `h` | `h` | Global links per router. A group therefore has `a*h` global ports. | Positive integer. |
+| `g` | `groups` | Number of Dragonfly groups. | Optional; defaults to `a*h + 1`. Must satisfy `g - 1 <= a*h`. |
+
+The default `groups = a*h + 1` is the fully populated Dragonfly case: every
+group can connect to every other group using exactly one inter-group link,
+because each group has `a*h` global ports and needs `g - 1` peer-group links.
+You can set a smaller `groups` value to model a partially populated Dragonfly.
+
+The implemented router and terminal counts are:
+
+```text
+routers R = g * a
+terminals N = g * a * p
+```
 
 Generated router radix metadata:
 
