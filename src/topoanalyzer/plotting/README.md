@@ -40,7 +40,7 @@ plot:
 With log scale, the primary plot title becomes:
 
 ```text
-Latency vs Accepted Rate (log scale)
+Latency vs Injection Rate (log scale)
 ```
 
 ### `emit_companion_plot`
@@ -77,24 +77,31 @@ emit_companion_plot: true
 
 ## Axis Labels
 
-The x-axis values are measured `accepted_rate` values from the result CSV, not
-the configured offered `injection_rate` sweep points. The axis label uses the
-benchmark rate unit:
+The x-axis values are measured injection rates computed from the result CSV:
 
 ```text
-Accepted rate (flits/node/cycle)
+accepted_rate * packet_size
+```
+
+This converts BookSim's accepted packet rate to an accepted flit injection
+rate for flit-rate sweeps. It is still measured throughput, not the configured
+offered `injection_rate` sweep point. The axis label uses the benchmark rate
+unit:
+
+```text
+Injection rate (flits/node/cycle)
 ```
 
 or:
 
 ```text
-Accepted rate (packets/node/cycle)
+Injection rate (packets/node/cycle)
 ```
 
 If rows contain mixed units, the label becomes:
 
 ```text
-Accepted rate (mixed units)
+Injection rate (mixed units)
 ```
 
 The y-axis is always:
@@ -106,7 +113,7 @@ Average packet latency (cycles)
 Rows are grouped by configured offered `injection_rate` so repetitions of the
 same sweep point are averaged together. Line segments are drawn in increasing
 offered `injection_rate` order, while each point's x-coordinate remains the
-averaged measured `accepted_rate`.
+averaged measured `accepted_rate * packet_size`.
 
 ## Plot Input
 
@@ -122,4 +129,6 @@ Only rows with:
 status == ok
 ```
 
-at least one latency metric, and a parseable `accepted_rate` are plotted.
+at least one latency metric, a parseable `accepted_rate`, and a positive
+`packet_size` are plotted. For older CSV files without `packet_size`, the
+plotter uses `1`.

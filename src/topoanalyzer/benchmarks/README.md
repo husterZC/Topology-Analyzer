@@ -64,8 +64,9 @@ plots/latency_vs_injection.pdf
 ```
 
 The sweep is configured by offered `injection_rate`, but the latency plot uses
-BookSim's measured `accepted_rate` on the x-axis. The offered rate remains in
-the CSV so each plotted point can be traced back to the requested load.
+BookSim's measured `accepted_rate * packet_size` on the x-axis. The offered
+rate remains in the CSV so each plotted point can be traced back to the
+requested load.
 
 ### Fields
 
@@ -107,6 +108,41 @@ Field reference:
 - `router_latency`: stored in options for future router models. Current BookSim anynet path does not lower it directly.
 - `timeout_seconds`: optional per-run subprocess timeout.
 - `stop_on_error`: stop the sweep after the first `error` or `failed` run point. Optional, default `false`.
+
+### Traffic Patterns
+
+`traffic` is passed directly to BookSim as the `traffic = ...;` config field.
+Topology-Analyzer does not currently validate the traffic string before launch,
+so unsupported or incompatible patterns fail inside BookSim.
+
+`uniform` is the default. It is stochastic uniform random traffic: each packet
+source chooses a random destination from the BookSim terminal ID range. It is
+not a deterministic all-to-all permutation.
+
+Common BookSim2 traffic strings:
+
+| Traffic | Description | Notes |
+|---|---|---|
+| `uniform` | Random destination over all terminals. | Safest generic baseline. |
+| `randperm(seed)` | Fixed random one-to-one destination permutation. | Good repeatable permutation baseline. |
+| `hotspot(...)` | Weighted hotspot destination traffic. | Useful for imbalance and contention studies. |
+| `background(...)` | Uniform random traffic excluding selected destinations. | Requires an exclusion list. |
+| `bitcomp` | Bit-complement permutation. | Node count must be a power of two. |
+| `bitrev` | Bit-reversal permutation. | Node count must be a power of two. |
+| `shuffle` | Shuffle permutation. | Node count must be a power of two. |
+| `transpose` | Bit-transpose permutation. | Node count must be an even power of two. |
+| `diagonal` | Random diagonal/local-style pattern. | BookSim built-in synthetic pattern. |
+| `asymmetric` | Asymmetric half-network pattern. | BookSim built-in synthetic pattern. |
+| `taper64` | Special local-plus-random 64-node pattern. | Requires exactly 64 terminals. |
+| `tornado(k,n,xr)` | Tornado pattern for k-ary n-dimensional-style networks. | Parameters must match the intended indexing. |
+| `neighbor(k,n,xr)` | Neighbor pattern for k-ary n-dimensional-style networks. | Parameters must match the intended indexing. |
+| `badperm_yarc(k,n,xr)` | YARC adversarial permutation. | Topology/indexing specific. |
+| `bad_dragon(k,n)` | Dragonfly bad permutation. | Intended for dragonfly-style layouts. |
+
+For topology-independent benchmarking on the `anynet` backend, prefer
+`uniform`, `randperm(seed)`, and one or more `hotspot(...)` cases first. Add
+the topology-specific/adversarial patterns only when their node-count and
+indexing assumptions match the system under test.
 
 By default the runner records an `error` row and continues to the next run point
 when one BookSim invocation fails. Set:
