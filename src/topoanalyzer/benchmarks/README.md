@@ -63,6 +63,10 @@ plots/latency_vs_injection.png
 plots/latency_vs_injection.pdf
 ```
 
+The sweep is configured by offered `injection_rate`, but the latency plot uses
+BookSim's measured `accepted_rate` on the x-axis. The offered rate remains in
+the CSV so each plotted point can be traced back to the requested load.
+
 ### Fields
 
 ```yaml

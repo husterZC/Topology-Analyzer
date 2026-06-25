@@ -230,6 +230,8 @@ abort immediately.
 With `plot.y_scale: log`, the primary `latency_vs_injection.png` uses a log
 y-axis. If `emit_companion_plot` is true, the runner also writes the opposite
 scale as `latency_vs_injection_linear.png` or `latency_vs_injection_log.png`.
+The sweep points are configured as offered `injection_rate`, but generated
+plots use BookSim's measured `accepted_rate` on the x-axis.
 
 Each run is self-contained:
 

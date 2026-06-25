@@ -40,7 +40,7 @@ plot:
 With log scale, the primary plot title becomes:
 
 ```text
-Latency vs Injection Rate (log scale)
+Latency vs Accepted Rate (log scale)
 ```
 
 ### `emit_companion_plot`
@@ -77,22 +77,24 @@ emit_companion_plot: true
 
 ## Axis Labels
 
-The x-axis label is inferred from the result CSV:
+The x-axis values are measured `accepted_rate` values from the result CSV, not
+the configured offered `injection_rate` sweep points. The axis label uses the
+benchmark rate unit:
 
 ```text
-Injection rate (flits/node/cycle)
+Accepted rate (flits/node/cycle)
 ```
 
 or:
 
 ```text
-Injection rate (packets/node/cycle)
+Accepted rate (packets/node/cycle)
 ```
 
 If rows contain mixed units, the label becomes:
 
 ```text
-Injection rate (mixed units)
+Accepted rate (mixed units)
 ```
 
 The y-axis is always:
@@ -115,4 +117,4 @@ Only rows with:
 status == ok
 ```
 
-and at least one latency metric are plotted.
+at least one latency metric, and a parseable `accepted_rate` are plotted.

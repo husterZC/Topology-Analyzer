@@ -20,13 +20,7 @@ def plot_latency_vs_injection(
     except ImportError:
         return []
 
-    series: dict[str, dict[float, list[float]]] = defaultdict(lambda: defaultdict(list))
-    for row in rows:
-        latency = row.get("average_packet_latency") or row.get("average_network_latency")
-        if latency is None:
-            continue
-        label = row.get("case") or row["system"]
-        series[label][float(row["injection_rate"])].append(float(latency))
+    series = _latency_series(rows)
     if not series:
         return []
 
@@ -41,7 +35,7 @@ def plot_latency_vs_injection(
         plt.plot(x_values, y_values, marker="o", linewidth=1.8, label=system)
     plt.xlabel(_x_axis_label(rows))
     plt.ylabel("Average packet latency (cycles)")
-    plt.title("Latency vs Injection Rate" + (" (log scale)" if log_y else ""))
+    plt.title("Latency vs Accepted Rate" + (" (log scale)" if log_y else ""))
     if log_y:
         plt.yscale("log")
     plt.grid(True, alpha=0.3)
@@ -71,6 +65,24 @@ def _load_ok_rows(csv_path: Path) -> list[dict[str, str]]:
     return rows
 
 
+def _latency_series(
+    rows: list[dict[str, str]]
+) -> dict[str, dict[float, list[float]]]:
+    series: dict[str, dict[float, list[float]]] = defaultdict(lambda: defaultdict(list))
+    for row in rows:
+        accepted_rate = _parse_float(row.get("accepted_rate"))
+        if accepted_rate is None:
+            continue
+        latency = _parse_float(row.get("average_packet_latency"))
+        if latency is None:
+            latency = _parse_float(row.get("average_network_latency"))
+        if latency is None:
+            continue
+        label = row.get("case") or row["system"]
+        series[label][accepted_rate].append(latency)
+    return series
+
+
 def _x_axis_label(rows: list[dict[str, str]]) -> str:
     units = {
         row.get("injection_rate_unit", "").strip()
@@ -78,7 +90,16 @@ def _x_axis_label(rows: list[dict[str, str]]) -> str:
         if row.get("injection_rate_unit")
     }
     if len(units) == 1:
-        return f"Injection rate ({next(iter(units))})"
+        return f"Accepted rate ({next(iter(units))})"
     if len(units) > 1:
-        return "Injection rate (mixed units)"
-    return "Injection rate"
+        return "Accepted rate (mixed units)"
+    return "Accepted rate"
+
+
+def _parse_float(value: str | None) -> float | None:
+    if value is None or value == "":
+        return None
+    try:
+        return float(value)
+    except ValueError:
+        return None

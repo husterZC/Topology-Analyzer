@@ -99,7 +99,7 @@ make clean-runs
 
 | Benchmark Type | Output | Description |
 |---|---|---|
-| `latency_vs_injection_rate` | CSV, JSON, PNG, PDF | Sweeps injection rate and plots latency. |
+| `latency_vs_injection_rate` | CSV, JSON, PNG, PDF | Sweeps offered injection rate and plots latency against measured accepted rate. |
 
 Set `benchmark.stop_on_error: true` to abort a sweep after the first failed
 BookSim point. By default, errors are recorded and the sweep continues.
