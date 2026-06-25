@@ -2,7 +2,15 @@ from __future__ import annotations
 
 import csv
 from collections import defaultdict
+from dataclasses import dataclass
 from pathlib import Path
+
+
+@dataclass(frozen=True)
+class _LatencyPoint:
+    injection_rate: float
+    accepted_rate: float
+    latency: float
 
 
 def plot_latency_vs_injection(
@@ -26,12 +34,9 @@ def plot_latency_vs_injection(
 
     png_path.parent.mkdir(parents=True, exist_ok=True)
     plt.figure(figsize=(7.0, 4.5))
-    for system, values in sorted(series.items()):
-        x_values = sorted(values)
-        y_values = [
-            sum(values[inj]) / len(values[inj])
-            for inj in x_values
-        ]
+    for system, points in sorted(series.items()):
+        x_values = [point.accepted_rate for point in points]
+        y_values = [point.latency for point in points]
         plt.plot(x_values, y_values, marker="o", linewidth=1.8, label=system)
     plt.xlabel(_x_axis_label(rows))
     plt.ylabel("Average packet latency (cycles)")
@@ -67,9 +72,14 @@ def _load_ok_rows(csv_path: Path) -> list[dict[str, str]]:
 
 def _latency_series(
     rows: list[dict[str, str]]
-) -> dict[str, dict[float, list[float]]]:
-    series: dict[str, dict[float, list[float]]] = defaultdict(lambda: defaultdict(list))
+) -> dict[str, list[_LatencyPoint]]:
+    buckets: dict[str, dict[float, list[tuple[float, float]]]] = defaultdict(
+        lambda: defaultdict(list)
+    )
     for row in rows:
+        injection_rate = _parse_float(row.get("injection_rate"))
+        if injection_rate is None:
+            continue
         accepted_rate = _parse_float(row.get("accepted_rate"))
         if accepted_rate is None:
             continue
@@ -79,7 +89,18 @@ def _latency_series(
         if latency is None:
             continue
         label = row.get("case") or row["system"]
-        series[label][accepted_rate].append(latency)
+        buckets[label][injection_rate].append((accepted_rate, latency))
+
+    series: dict[str, list[_LatencyPoint]] = {}
+    for label, values in buckets.items():
+        series[label] = [
+            _LatencyPoint(
+                injection_rate=injection_rate,
+                accepted_rate=sum(sample[0] for sample in samples) / len(samples),
+                latency=sum(sample[1] for sample in samples) / len(samples),
+            )
+            for injection_rate, samples in sorted(values.items())
+        ]
     return series
 
 

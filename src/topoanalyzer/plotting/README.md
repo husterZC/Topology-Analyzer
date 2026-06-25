@@ -103,6 +103,11 @@ The y-axis is always:
 Average packet latency (cycles)
 ```
 
+Rows are grouped by configured offered `injection_rate` so repetitions of the
+same sweep point are averaged together. Line segments are drawn in increasing
+offered `injection_rate` order, while each point's x-coordinate remains the
+averaged measured `accepted_rate`.
+
 ## Plot Input
 
 The plotter reads:
