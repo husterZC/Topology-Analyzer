@@ -35,9 +35,11 @@ These formulas describe the graph models implemented in this repository.
   count per layer. `p_v` is the modeled number of vertical pillars per router.
 - Diameter is router-hop diameter. Terminal injection/ejection hops are not
   modeled as graph links.
-- Bisection bandwidth is the minimum one-way aggregate bandwidth across any
-  balanced router bisection. For heterogeneous links, use the bandwidth class
-  in the formula.
+- Bisection bandwidth is reported as a one-way aggregate cut bandwidth. Small
+  graphs use exact balanced router-cut enumeration; larger graphs use the
+  topology-level closed-form formulas or documented estimates in the table
+  below. For heterogeneous links, the formulas require uniform bandwidth within
+  each relevant link class.
 
 ## Max Nodes
 
@@ -83,7 +85,7 @@ ruche systems.
 
 ## Bisection Bandwidth
 
-| Topology | Minimum One-Way Bisection Bandwidth |
+| Topology | Reported One-Way Bisection Bandwidth |
 |---|---:|
 | `mesh2d` | `min(y*b_x, x*b_y)` |
 | `mesh3d` | `min(y*z*b_x, x*z*b_y, x*y*b_z)` |
@@ -91,11 +93,11 @@ ruche systems.
 | `torus3d` | `min(2*y*z*b_x, 2*x*z*b_y, 2*x*y*b_z)` |
 | `ruche3d` non-wrap | `min_A P_A * (b_A + E(L_A,s_A,m_A)*b_ruche_A)` |
 | `hypercube` | `2^(d-1)*b` |
-| `dragonfly` group-level | `floor(g^2/4)*b_global` |
-| `slimnoc` exact graph cut | `b * min_{size(S)=q^2} cut_edges(S)` |
-| `ubmesh` dimension-aligned min-bisection | `min_i (R/L_i)*floor(L_i/2)*ceil(L_i/2)*b_i` |
-| `lln` full projected clique estimate | `min(floor(G^2/4)*b_long, G*p_v*b_vertical)` |
-| `fattree` ideal full bisection | `floor(N/2)*b` |
+| `ubmesh` nD-FullMesh | `min_i (R/L_i)*floor(L_i/2)*ceil(L_i/2)*b_i` |
+| `dragonfly` group-level estimate | `floor(g/2)*ceil(g/2)*b_global` |
+| `slimnoc` group-level estimate | `2*(q-1)*floor(q/2)*ceil(q/2)*b_cross` |
+| `lln` projected estimate | `min(floor(G^2/4)*b_long, G*p_v*b_vertical)` |
+| `fattree` terminal/full-bisection estimate | `floor(N/2)*b_min` |
 
 For the `ruche3d` formula:
 
@@ -107,17 +109,17 @@ For the `ruche3d` formula:
 E(L,s,m) = max(0, min(m-1, L-s-1) - max(0, m-s) + 1)
 ```
 
-Dragonfly bisection is shown at group granularity for the default full
-one-link-per-group-pair arrangement. Exact router-level bisection can vary with
-terminal partitioning and global-link placement.
+Dragonfly uses the group-level cut for the default one-link-per-group-pair
+arrangement. For odd `g`, this is a non-strict router bisection estimate because
+the two sides contain different numbers of groups.
 
-SlimNoC exact bisection is stated as the graph min-bisection. For the natural
-group-level SlimNoC cut, every pair of groups contributes `2*(q-1)` links, so
-the group-cut capacity is `2*(q-1)*floor(q/2)*ceil(q/2)*b`.
+SlimNoC uses the natural group-level cut. Every pair of groups contributes
+`2*(q-1)` cross links, so the group-cut capacity estimate is
+`2*(q-1)*floor(q/2)*ceil(q/2)*b_cross`.
 
-Fat-tree bisection assumes a regular full-bisection Fat-tree with homogeneous
-link bandwidth. With per-level link bandwidths, the bisection is limited by the
-minimum aggregate capacity of the cut level.
+Fat-tree endpoint bisection is often quoted as `floor(N/2)*b` for a regular
+full-bisection Fat-tree with homogeneous links. The benchmark metrics report
+this terminal/full-bisection estimate for larger Fat-tree graphs.
 
 ## Topology Details
 

@@ -5,8 +5,10 @@ from collections import deque
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from itertools import combinations
+from math import ceil, floor, prod
+from typing import Callable
 
-from topoanalyzer.model.graph import TopologyGraph
+from topoanalyzer.model.graph import Link, TopologyGraph
 from topoanalyzer.model.system import System
 
 
@@ -48,6 +50,13 @@ class _BisectionResult:
         return f"{_format_decimal(self.value)}{self.unit}"
 
 
+@dataclass(frozen=True)
+class _FormulaCandidate:
+    value: Decimal
+    unit: str
+    note: str
+
+
 def write_metrics_text(systems: list[System], path) -> None:
     path.write_text(metrics_text(systems), encoding="utf-8")
 
@@ -66,7 +75,7 @@ def metrics_text(systems: list[System]) -> str:
         "  max_router_radix: maximum router output radix, counted as outgoing "
         "router-router links plus locally attached terminal/injection ports.",
         "  diameter: exact directed router-hop diameter over router nodes.",
-        "  bisection_bandwidth: one-way aggregate bandwidth across a balanced router bisection when exact, or the documented method otherwise.",
+        "  bisection_bandwidth: one-way aggregate bisection bandwidth. Small graphs use exact balanced router cuts; larger graphs use topology-level formulas or documented estimates.",
         "",
     ]
     for system in unique_systems:
@@ -247,21 +256,20 @@ def _bisection_bandwidth(system: System) -> _BisectionResult:
         if exact.value is not None:
             return exact
 
-    if system.topology_type == "fattree":
-        formula = _fattree_bisection(system)
-        if formula.value is not None:
-            return formula
-
-    axis_cut = _axis_aligned_bisection(system.graph, routers)
-    if axis_cut.value is not None:
-        return axis_cut
+    formula = _formula_bisection(system)
+    if formula.value is not None:
+        return formula
 
     return _BisectionResult(
         None,
         None,
-        "unavailable",
+        "bisection_formula_unavailable",
         None,
-        "no exact cut was attempted for this router count and no coordinate cut was available",
+        (
+            "exact balanced cut enumeration is disabled above "
+            f"{_EXACT_BISECTION_ROUTER_LIMIT} routers and no formula "
+            f"is implemented for topology {system.topology_type}"
+        ),
     )
 
 
@@ -293,83 +301,465 @@ def _exact_bisection(graph: TopologyGraph, routers: list[str]) -> _BisectionResu
     return _BisectionResult(best[0], best[1], "exact_balanced_router_cut", best[2])
 
 
-def _fattree_bisection(system: System) -> _BisectionResult:
-    bandwidth = _minimum_link_bandwidth(system.graph)
-    if bandwidth is None:
-        return _BisectionResult(
-            None,
-            None,
-            "fattree_terminal_bisection_formula",
-            None,
-            "link bandwidths use mixed or unparseable units",
+def _formula_bisection(system: System) -> _BisectionResult:
+    graph = system.graph
+    partition_sizes = _balanced_router_partition_sizes(graph)
+    if system.topology_type in {"mesh2d", "mesh3d"}:
+        return _mesh_bisection(graph, partition_sizes)
+    if system.topology_type in {"torus2d", "torus3d"}:
+        return _torus_bisection(graph, partition_sizes)
+    if system.topology_type == "ruche3d":
+        return _ruche_bisection(graph, partition_sizes)
+    if system.topology_type == "hypercube":
+        return _hypercube_bisection(graph, partition_sizes)
+    if system.topology_type == "ubmesh":
+        return _ubmesh_bisection(graph, partition_sizes)
+    if system.topology_type == "dragonfly":
+        return _dragonfly_bisection_estimate(graph)
+    if system.topology_type == "slimnoc":
+        return _slimnoc_bisection_estimate(graph)
+    if system.topology_type == "lln":
+        return _lln_bisection_estimate(graph)
+    if system.topology_type == "fattree":
+        return _fattree_bisection_estimate(graph)
+    return _BisectionResult(None, None, "bisection_formula_unavailable", None)
+
+
+def _mesh_bisection(
+    graph: TopologyGraph,
+    partition_sizes: tuple[int, int],
+) -> _BisectionResult:
+    dimensions = _ordered_dimensions(graph)
+    candidates: list[_FormulaCandidate] = []
+    for axis, length in dimensions:
+        if length <= 1:
+            continue
+        bandwidth = _uniform_bandwidth_for_class(graph, {axis})
+        if bandwidth is None:
+            return _unavailable_formula(
+                "mesh_axis_bisection_formula",
+                f"axis {axis} has mixed or unparseable link bandwidths",
+            )
+        value, unit = bandwidth
+        crossing_links = prod(
+            other_length
+            for other_axis, other_length in dimensions
+            if other_axis != axis
         )
-    value, unit = bandwidth
-    terminal_count = _terminal_node_count(system.graph)
-    return _BisectionResult(
-        Decimal(terminal_count // 2) * value,
-        unit,
-        "fattree_terminal_bisection_formula",
-        (terminal_count // 2, terminal_count - terminal_count // 2),
+        candidates.append(
+            _FormulaCandidate(
+                Decimal(crossing_links) * value,
+                unit,
+                f"axis={axis}, crossing_links={crossing_links}",
+            )
+        )
+    return _select_formula_candidate(
+        candidates,
+        "mesh_axis_bisection_formula",
+        partition_sizes,
     )
 
 
-def _axis_aligned_bisection(graph: TopologyGraph, routers: list[str]) -> _BisectionResult:
-    coords = _router_coords(graph, routers)
-    if not coords:
-        return _BisectionResult(None, None, "axis_aligned_router_cut", None, "router coordinates unavailable")
-
-    dimension_count = len(next(iter(coords.values())))
-    best: tuple[int, Decimal, str, tuple[int, int], int] | None = None
-    for axis in range(dimension_count):
-        values = sorted({coord[axis] for coord in coords.values()})
-        for threshold in values[:-1]:
-            left = {
-                router
-                for router, coord in coords.items()
-                if coord[axis] <= threshold
-            }
-            if not left or len(left) == len(routers):
-                continue
-            result = _partition_bandwidth(graph, left)
-            if result.value is None or result.unit is None:
-                continue
-            partition_sizes = result.partition_sizes or (len(left), len(routers) - len(left))
-            imbalance = abs(partition_sizes[0] - partition_sizes[1])
-            candidate = (imbalance, result.value, result.unit, partition_sizes, axis)
-            if best is None or candidate[:2] < best[:2]:
-                best = candidate
-
-    if best is None:
-        return _BisectionResult(
-            None,
-            None,
-            "axis_aligned_router_cut",
-            None,
-            "no coordinate axis produced a valid cut",
+def _torus_bisection(
+    graph: TopologyGraph,
+    partition_sizes: tuple[int, int],
+) -> _BisectionResult:
+    dimensions = _ordered_dimensions(graph)
+    candidates: list[_FormulaCandidate] = []
+    for axis, length in dimensions:
+        if length <= 1:
+            continue
+        bandwidth = _uniform_bandwidth_for_class(graph, {axis, f"{axis}_wrap"})
+        if bandwidth is None:
+            return _unavailable_formula(
+                "torus_axis_bisection_formula",
+                f"axis {axis} has mixed or unparseable link bandwidths",
+            )
+        value, unit = bandwidth
+        crossing_links = 2 * prod(
+            other_length
+            for other_axis, other_length in dimensions
+            if other_axis != axis
         )
-    imbalance, value, unit, partition_sizes, axis = best
-    method = "axis_aligned_balanced_router_cut" if imbalance <= 1 else "axis_aligned_nearest_router_cut"
-    note = f"axis={axis}, imbalance={imbalance}"
-    return _BisectionResult(value, unit, method, partition_sizes, note)
+        candidates.append(
+            _FormulaCandidate(
+                Decimal(crossing_links) * value,
+                unit,
+                f"axis={axis}, crossing_links={crossing_links}",
+            )
+        )
+    return _select_formula_candidate(
+        candidates,
+        "torus_axis_bisection_formula",
+        partition_sizes,
+    )
 
 
-def _router_coords(graph: TopologyGraph, routers: list[str]) -> dict[str, tuple[int, ...]]:
-    coords: dict[str, tuple[int, ...]] = {}
-    dimension_count: int | None = None
-    for router in routers:
-        value = graph.nodes[router].metadata.get("coord")
-        if not isinstance(value, (list, tuple)):
-            return {}
-        try:
-            coord = tuple(int(item) for item in value)
-        except (TypeError, ValueError):
-            return {}
-        if dimension_count is None:
-            dimension_count = len(coord)
-        elif len(coord) != dimension_count:
-            return {}
-        coords[router] = coord
-    return coords
+def _ruche_bisection(
+    graph: TopologyGraph,
+    partition_sizes: tuple[int, int],
+) -> _BisectionResult:
+    if bool(graph.metadata.get("wrap", False)):
+        return _unavailable_formula(
+            "ruche_nonwrap_axis_bisection_formula",
+            "wrap ruche bisection formula is not implemented",
+        )
+    dimensions = _ordered_dimensions(graph)
+    strides_data = graph.metadata.get("strides", {})
+    if not isinstance(strides_data, dict):
+        return _unavailable_formula(
+            "ruche_nonwrap_axis_bisection_formula",
+            "ruche stride metadata is unavailable",
+        )
+
+    candidates: list[_FormulaCandidate] = []
+    for axis, length in dimensions:
+        if length <= 1:
+            continue
+        local_bandwidth = _uniform_bandwidth_for_class(graph, {axis})
+        if local_bandwidth is None:
+            return _unavailable_formula(
+                "ruche_nonwrap_axis_bisection_formula",
+                f"axis {axis} has mixed or unparseable local-link bandwidths",
+            )
+        local_value, unit = local_bandwidth
+        stride = int(strides_data.get(axis, 0))
+        cut_position = length // 2
+        local_crossings_per_line = 1
+        ruche_crossings_per_line = _ruche_crossing_count(
+            length,
+            stride,
+            cut_position,
+        )
+        parallel_lines = prod(
+            other_length
+            for other_axis, other_length in dimensions
+            if other_axis != axis
+        )
+        value = Decimal(parallel_lines * local_crossings_per_line) * local_value
+        if ruche_crossings_per_line:
+            ruche_bandwidth = _uniform_bandwidth_for_class(graph, {f"ruche_{axis}"})
+            if ruche_bandwidth is None:
+                return _unavailable_formula(
+                    "ruche_nonwrap_axis_bisection_formula",
+                    f"axis {axis} has mixed or unparseable ruche-link bandwidths",
+                )
+            ruche_value, ruche_unit = ruche_bandwidth
+            if ruche_unit != unit:
+                return _unavailable_formula(
+                    "ruche_nonwrap_axis_bisection_formula",
+                    f"axis {axis} local and ruche bandwidth units differ",
+                )
+            value += Decimal(parallel_lines * ruche_crossings_per_line) * ruche_value
+        crossing_links = parallel_lines * (
+            local_crossings_per_line + ruche_crossings_per_line
+        )
+        candidates.append(
+            _FormulaCandidate(
+                value,
+                unit,
+                (
+                    f"axis={axis}, cut_position={cut_position}, "
+                    f"crossing_links={crossing_links}"
+                ),
+            )
+        )
+    return _select_formula_candidate(
+        candidates,
+        "ruche_nonwrap_axis_bisection_formula",
+        partition_sizes,
+    )
+
+
+def _hypercube_bisection(
+    graph: TopologyGraph,
+    partition_sizes: tuple[int, int],
+) -> _BisectionResult:
+    dimension = int(graph.metadata.get("dimension", 0))
+    if dimension <= 0:
+        return _unavailable_formula(
+            "hypercube_dimension_bisection_formula",
+            "hypercube dimension metadata is unavailable",
+        )
+    crossing_links = 1 << (dimension - 1)
+    candidates: list[_FormulaCandidate] = []
+    for bit in range(dimension):
+        bandwidth = _uniform_bandwidth_for_links(
+            graph,
+            lambda link, bit=bit: int(link.metadata.get("dimension", -1)) == bit,
+        )
+        if bandwidth is None:
+            return _unavailable_formula(
+                "hypercube_dimension_bisection_formula",
+                f"dimension {bit} has mixed or unparseable link bandwidths",
+            )
+        value, unit = bandwidth
+        candidates.append(
+            _FormulaCandidate(
+                Decimal(crossing_links) * value,
+                unit,
+                f"dimension={bit}, crossing_links={crossing_links}",
+            )
+        )
+    return _select_formula_candidate(
+        candidates,
+        "hypercube_dimension_bisection_formula",
+        partition_sizes,
+    )
+
+
+def _ubmesh_bisection(
+    graph: TopologyGraph,
+    partition_sizes: tuple[int, int],
+) -> _BisectionResult:
+    raw_dimensions = graph.metadata.get("dimensions")
+    if not isinstance(raw_dimensions, list) or not raw_dimensions:
+        return _unavailable_formula(
+            "ubmesh_nd_fullmesh_bisection_formula",
+            "ubmesh dimensions metadata is unavailable",
+        )
+    dimensions = [int(value) for value in raw_dimensions]
+    router_count = prod(dimensions)
+    candidates: list[_FormulaCandidate] = []
+    for axis, length in enumerate(dimensions):
+        if length <= 1:
+            continue
+        bandwidth = _uniform_bandwidth_for_links(
+            graph,
+            lambda link, axis=axis: int(link.metadata.get("dimension", -1)) == axis,
+        )
+        if bandwidth is None:
+            return _unavailable_formula(
+                "ubmesh_nd_fullmesh_bisection_formula",
+                f"dimension {axis} has mixed or unparseable link bandwidths",
+            )
+        value, unit = bandwidth
+        crossing_links = (
+            router_count
+            // length
+            * floor(length / 2)
+            * ceil(length / 2)
+        )
+        candidates.append(
+            _FormulaCandidate(
+                Decimal(crossing_links) * value,
+                unit,
+                f"dimension={axis}, crossing_links={crossing_links}",
+            )
+        )
+    return _select_formula_candidate(
+        candidates,
+        "ubmesh_nd_fullmesh_bisection_formula",
+        partition_sizes,
+    )
+
+
+def _dragonfly_bisection_estimate(graph: TopologyGraph) -> _BisectionResult:
+    groups = int(graph.metadata.get("groups", 0))
+    routers_per_group = int(graph.metadata.get("a", 0))
+    if groups <= 1 or routers_per_group <= 0:
+        return _unavailable_formula(
+            "dragonfly_group_bisection_estimate",
+            "dragonfly group metadata is unavailable",
+        )
+    bandwidth = _uniform_bandwidth_for_class(graph, {"global"})
+    if bandwidth is None:
+        return _unavailable_formula(
+            "dragonfly_group_bisection_estimate",
+            "global links have mixed or unparseable bandwidths",
+        )
+    value, unit = bandwidth
+    left_groups = groups // 2
+    right_groups = groups - left_groups
+    crossing_links = left_groups * right_groups
+    return _BisectionResult(
+        Decimal(crossing_links) * value,
+        unit,
+        "dragonfly_group_bisection_estimate",
+        (left_groups * routers_per_group, right_groups * routers_per_group),
+        (
+            f"group_partition_sizes={left_groups},{right_groups}, "
+            f"crossing_global_links={crossing_links}"
+        ),
+    )
+
+
+def _slimnoc_bisection_estimate(graph: TopologyGraph) -> _BisectionResult:
+    q = int(graph.metadata.get("q", 0))
+    if q <= 1:
+        return _unavailable_formula(
+            "slimnoc_group_bisection_estimate",
+            "slimnoc q metadata is unavailable",
+        )
+    bandwidth = _uniform_bandwidth_for_class(graph, {"cross"})
+    if bandwidth is None:
+        return _unavailable_formula(
+            "slimnoc_group_bisection_estimate",
+            "cross links have mixed or unparseable bandwidths",
+        )
+    value, unit = bandwidth
+    left_groups = q // 2
+    right_groups = q - left_groups
+    routers_per_group = 2 * q
+    crossing_links = 2 * (q - 1) * left_groups * right_groups
+    return _BisectionResult(
+        Decimal(crossing_links) * value,
+        unit,
+        "slimnoc_group_bisection_estimate",
+        (left_groups * routers_per_group, right_groups * routers_per_group),
+        (
+            f"group_partition_sizes={left_groups},{right_groups}, "
+            f"crossing_cross_links={crossing_links}"
+        ),
+    )
+
+
+def _lln_bisection_estimate(graph: TopologyGraph) -> _BisectionResult:
+    routers_per_layer = int(graph.metadata.get("routers_per_layer", 0))
+    vertical_pillars = int(graph.metadata.get("vertical_pillars", 0))
+    if routers_per_layer <= 0 or vertical_pillars <= 0:
+        return _unavailable_formula(
+            "lln_projected_bisection_estimate",
+            "lln projected-grid metadata is unavailable",
+        )
+    long_bandwidth = _uniform_bandwidth_for_class(graph, {"long"})
+    vertical_bandwidth = _uniform_bandwidth_for_class(graph, {"vertical"})
+    if long_bandwidth is None or vertical_bandwidth is None:
+        return _unavailable_formula(
+            "lln_projected_bisection_estimate",
+            "long or vertical links have mixed or unparseable bandwidths",
+        )
+    long_value, long_unit = long_bandwidth
+    vertical_value, vertical_unit = vertical_bandwidth
+    if long_unit != vertical_unit:
+        return _unavailable_formula(
+            "lln_projected_bisection_estimate",
+            "long and vertical link bandwidth units differ",
+        )
+    left = routers_per_layer // 2
+    right = routers_per_layer - left
+    long_crossing_links = left * right
+    vertical_crossing_links = routers_per_layer * vertical_pillars
+    candidates = [
+        _FormulaCandidate(
+            Decimal(long_crossing_links) * long_value,
+            long_unit,
+            f"projected_long_crossing_links={long_crossing_links}",
+        ),
+        _FormulaCandidate(
+            Decimal(vertical_crossing_links) * vertical_value,
+            vertical_unit,
+            f"vertical_crossing_links={vertical_crossing_links}",
+        ),
+    ]
+    return _select_formula_candidate(
+        candidates,
+        "lln_projected_bisection_estimate",
+        _balanced_router_partition_sizes(graph),
+    )
+
+
+def _fattree_bisection_estimate(graph: TopologyGraph) -> _BisectionResult:
+    bandwidth = _minimum_link_bandwidth(graph)
+    if bandwidth is None:
+        return _unavailable_formula(
+            "fattree_terminal_bisection_estimate",
+            "link bandwidths use mixed or unparseable units",
+        )
+    value, unit = bandwidth
+    terminal_count = _terminal_node_count(graph)
+    left = terminal_count // 2
+    right = terminal_count - left
+    return _BisectionResult(
+        Decimal(left) * value,
+        unit,
+        "fattree_terminal_bisection_estimate",
+        (left, right),
+        "terminal_partition_sizes",
+    )
+
+
+def _balanced_router_partition_sizes(graph: TopologyGraph) -> tuple[int, int]:
+    router_count = len(graph.routers())
+    left = router_count // 2
+    return left, router_count - left
+
+
+def _ordered_dimensions(graph: TopologyGraph) -> list[tuple[str, int]]:
+    raw = graph.metadata.get("dimensions")
+    if not isinstance(raw, dict):
+        return []
+    return [
+        (axis, int(raw[axis]))
+        for axis in ("x", "y", "z")
+        if axis in raw
+    ]
+
+
+def _ruche_crossing_count(length: int, stride: int, cut_position: int) -> int:
+    if stride <= 0:
+        return 0
+    first = max(0, cut_position - stride)
+    last = min(cut_position - 1, length - stride - 1)
+    if last < first:
+        return 0
+    return last - first + 1
+
+
+def _select_formula_candidate(
+    candidates: list[_FormulaCandidate],
+    method: str,
+    partition_sizes: tuple[int, int],
+) -> _BisectionResult:
+    if not candidates:
+        return _unavailable_formula(method, "no valid formula candidates")
+    units = {candidate.unit for candidate in candidates}
+    if len(units) != 1:
+        return _unavailable_formula(
+            method,
+            "formula candidates use different bandwidth units",
+        )
+    best = min(candidates, key=lambda candidate: candidate.value)
+    return _BisectionResult(
+        best.value,
+        best.unit,
+        method,
+        partition_sizes,
+        best.note,
+    )
+
+
+def _unavailable_formula(method: str, note: str) -> _BisectionResult:
+    return _BisectionResult(None, None, method, None, note)
+
+
+def _uniform_bandwidth_for_class(
+    graph: TopologyGraph,
+    classes: set[str],
+) -> tuple[Decimal, str] | None:
+    return _uniform_bandwidth_for_links(
+        graph,
+        lambda link: str(link.metadata.get("class", "default")) in classes,
+    )
+
+
+def _uniform_bandwidth_for_links(
+    graph: TopologyGraph,
+    predicate: Callable[[Link], bool],
+) -> tuple[Decimal, str] | None:
+    parsed_values: set[tuple[Decimal, str]] = set()
+    matched = False
+    for link in graph.links:
+        if not predicate(link):
+            continue
+        matched = True
+        parsed = _parse_bandwidth(link.bandwidth)
+        if parsed is None:
+            return None
+        parsed_values.add(parsed)
+    if not matched or len(parsed_values) != 1:
+        return None
+    return next(iter(parsed_values))
 
 
 def _partition_bandwidth(graph: TopologyGraph, left: set[str]) -> _BisectionResult:
