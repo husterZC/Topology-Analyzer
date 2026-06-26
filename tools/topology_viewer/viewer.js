@@ -134,13 +134,52 @@ function linkPoints(link) {
   const start = new THREE.Vector3().fromArray(link.sourcePosition);
   const end = new THREE.Vector3().fromArray(link.targetPosition);
   const curveHeight = Number(link.style.curveHeight || 0);
-  if (curveHeight <= 0) return [start, end];
+  if (curveHeight <= 0) {
+    const sharedPlane = link.kind === "network" ? coordinatePlane(start, end) : null;
+    if (sharedPlane) {
+      return samePlaneCurvePoints(link, start, end, sharedPlane);
+    }
+    return [start, end];
+  }
 
   const mid = start.clone().add(end).multiplyScalar(0.5);
   const distance = start.distanceTo(end);
   mid.y += Math.max(0.2, curveHeight * Math.max(1, distance * 0.18));
   const curve = new THREE.QuadraticBezierCurve3(start, mid, end);
   return curve.getPoints(16);
+}
+
+function coordinatePlane(start, end) {
+  if (Math.abs(start.y - end.y) < 1e-6) return "xz";
+  if (Math.abs(start.z - end.z) < 1e-6) return "xy";
+  if (Math.abs(start.x - end.x) < 1e-6) return "yz";
+  return null;
+}
+
+function samePlaneCurvePoints(link, start, end, plane) {
+  const delta = end.clone().sub(start);
+  const distance = planeDistance(delta, plane);
+  if (distance < 1e-6) return [start, end];
+
+  const normal = planeNormal(delta, plane).normalize();
+  const direction = link.src < link.dst ? 1 : -1;
+  const bend = Math.min(0.42, Math.max(0.08, distance * 0.12));
+  const mid = start.clone().add(end).multiplyScalar(0.5);
+  mid.addScaledVector(normal, bend * direction);
+  const curve = new THREE.QuadraticBezierCurve3(start, mid, end);
+  return curve.getPoints(12);
+}
+
+function planeDistance(delta, plane) {
+  if (plane === "xy") return Math.hypot(delta.x, delta.y);
+  if (plane === "xz") return Math.hypot(delta.x, delta.z);
+  return Math.hypot(delta.y, delta.z);
+}
+
+function planeNormal(delta, plane) {
+  if (plane === "xy") return new THREE.Vector3(-delta.y, delta.x, 0);
+  if (plane === "xz") return new THREE.Vector3(-delta.z, 0, delta.x);
+  return new THREE.Vector3(0, -delta.z, delta.y);
 }
 
 function makeLabel(text) {

@@ -89,6 +89,8 @@ topoanalyzer view examples/systems/hypercube/ecube/hypercube_d4_ecube.yaml \
 - Right drag or `Shift` + drag: pan.
 - Camera buttons: switch topology-specific views.
 - Link checkboxes: show or hide link classes.
+- Network links that share a coordinate plane are drawn with a small in-plane
+  curve to reduce straight-line overlap.
 - For SlimNoC Figure 7(b), `local cross links` are the shown intra-group
   vertical links and `inter-group cross links` are the omitted full-system
   connections.
