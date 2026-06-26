@@ -15,6 +15,7 @@ from topoanalyzer.experiments.factory import build_system_from_dict
 from topoanalyzer.experiments.loader import load_document
 from topoanalyzer.model.system import System
 from topoanalyzer.simulators.booksim.backend import BookSimBackend
+from topoanalyzer.viewer import export_viewer
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -28,6 +29,11 @@ def main(argv: list[str] | None = None) -> int:
     build_parser.add_argument("system_file", type=Path)
     build_parser.add_argument("--output-dir", type=Path, default=Path("build/system"))
 
+    view_parser = subparsers.add_parser("view", help="export an interactive 3D topology viewer")
+    view_parser.add_argument("system_file", type=Path)
+    view_parser.add_argument("--output-dir", type=Path)
+    view_parser.add_argument("--title")
+
     benchmark_parser = subparsers.add_parser("benchmark", help="run a benchmark file")
     benchmark_parser.add_argument("benchmark_file", type=Path)
     benchmark_parser.add_argument("--dry-run", action="store_true")
@@ -40,6 +46,8 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_validate(args.system_file)
     if args.command == "build":
         return _cmd_build(args.system_file, args.output_dir)
+    if args.command == "view":
+        return _cmd_view(args.system_file, args.output_dir, args.title)
     if args.command == "benchmark":
         return _cmd_benchmark(
             args.benchmark_file,
@@ -68,6 +76,16 @@ def _cmd_build(system_file: Path, output_dir: Path) -> int:
     _write_json(output_dir / "routing_table.json", system.routing_table.to_dict())
     _write_json(output_dir / "validation.json", report.to_dict())
     print(output_dir)
+    return 0
+
+
+def _cmd_view(system_file: Path, output_dir: Path | None, title: str | None) -> int:
+    system = _load_system(system_file)
+    report = system.validate()
+    report.raise_if_errors()
+    target_dir = output_dir or Path("views") / system.name
+    output = export_viewer(system, target_dir, title=title)
+    print(output / "index.html")
     return 0
 
 

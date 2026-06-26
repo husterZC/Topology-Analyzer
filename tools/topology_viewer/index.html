@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>__VIEWER_TITLE__ - Topology Viewer</title>
+    <link rel="stylesheet" href="./style.css">
+  </head>
+  <body>
+    <div id="app">
+      <aside id="panel">
+        <header>
+          <div class="eyebrow">Topology Analyzer</div>
+          <h1 id="system-name">Topology Viewer</h1>
+          <div id="system-meta"></div>
+        </header>
+
+        <section>
+          <h2>Camera</h2>
+          <div id="camera-presets" class="button-grid"></div>
+        </section>
+
+        <section>
+          <h2>Display</h2>
+          <label class="control-row">
+            <input id="labels-toggle" type="checkbox">
+            <span>Labels</span>
+          </label>
+          <label class="control-row">
+            <input id="links-toggle" type="checkbox" checked>
+            <span>Links</span>
+          </label>
+          <label class="control-row">
+            <span>Link opacity</span>
+            <input id="opacity-slider" type="range" min="0.05" max="1" step="0.05" value="1">
+          </label>
+        </section>
+
+        <section>
+          <h2>Link Classes</h2>
+          <div id="link-filters" class="filter-list"></div>
+        </section>
+
+        <section>
+          <h2>Legend</h2>
+          <div id="legend"></div>
+        </section>
+      </aside>
+
+      <main id="viewport">
+        <canvas id="scene"></canvas>
+        <div id="hud">
+          <div id="layout-name"></div>
+          <div id="hover-card">Hover a router</div>
+        </div>
+      </main>
+    </div>
+
+    <script id="scene-data" type="application/json">__SCENE_JSON__</script>
+    <script src="./vendor/three/three.min.js"></script>
+    <script src="./viewer.js"></script>
+  </body>
+</html>

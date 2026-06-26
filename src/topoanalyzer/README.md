@@ -10,6 +10,7 @@ The CLI entry points are:
 ```bash
 topoanalyzer validate <system.yaml>
 topoanalyzer build <system.yaml> --output-dir <dir>
+topoanalyzer view <system.yaml> --output-dir <dir>
 topoanalyzer benchmark <benchmark.yaml>
 ```
 
@@ -127,6 +128,28 @@ Optional top-level fields:
 - `plot`: plot settings.
 - `booksim`: simulator backend settings.
 - `output_dir`: run output root. Defaults to `runs`.
+
+## 3D Viewer Export
+
+Generate an interactive viewer for any system YAML:
+
+```bash
+topoanalyzer view examples/systems/slimnoc/min/slimnoc_q5_p4_min.yaml --output-dir views/slimnoc_q5_p4
+```
+
+The command writes:
+
+```text
+index.html
+scene.json
+viewer.js
+style.css
+vendor/
+```
+
+The generated `index.html` embeds the scene data, so it can be opened directly
+from the output directory. It uses the static assets and repo-local Three.js
+runtime file in `tools/topology_viewer`.
 
 ## Path Rules
 

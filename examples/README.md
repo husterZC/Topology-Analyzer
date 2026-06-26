@@ -90,4 +90,5 @@ topoanalyzer validate examples/systems/mesh2d/graph_updown/mesh2d_4x4_graph_updo
 topoanalyzer benchmark examples/benchmarks/mesh2d/latency_vs_injection_mesh2d_scales.yaml --dry-run
 topoanalyzer benchmark examples/benchmarks/comparisons/latency_vs_injection_fattree_r8_l4_vs_mesh_16x16.yaml --dry-run
 topoanalyzer benchmark examples/benchmarks/system_regression/latency_vs_injection_booksim_smoke.yaml --no-progress
+topoanalyzer view examples/systems/slimnoc/min/slimnoc_q5_p4_min.yaml --output-dir views/slimnoc_q5_p4
 ```

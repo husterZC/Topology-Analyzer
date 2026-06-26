@@ -153,6 +153,27 @@ routing_table.json
 validation.json
 ```
 
+## 3D Topology Viewer
+
+```bash
+topoanalyzer view examples/systems/lln/table/lln_4x4x5_table.yaml --output-dir views/lln_4x4x5
+```
+
+This writes a static Three.js viewer:
+
+```text
+index.html
+scene.json
+viewer.js
+style.css
+vendor/
+```
+
+Open `index.html` in a browser. The viewer supports rotate, pan, zoom, camera
+presets, labels, hover details, and link-class filtering. LLN, UBMesh, SlimNoC,
+Dragonfly, and Hypercube use topology-specific 3D layouts; other graph types
+use a generic coordinate layout.
+
 ## Dry-Run A Benchmark
 
 ```bash

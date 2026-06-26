@@ -41,6 +41,12 @@ Run a real BookSim sweep:
 topoanalyzer benchmark examples/benchmarks/mesh2d/latency_vs_injection_mesh2d.yaml
 ```
 
+Generate an interactive 3D topology viewer:
+
+```bash
+topoanalyzer view examples/systems/lln/table/lln_4x4x5_table.yaml --output-dir views/lln_4x4x5
+```
+
 Useful commands:
 
 ```bash
@@ -106,6 +112,15 @@ make clean-runs
 
 Set `benchmark.stop_on_error: true` to abort a sweep after the first failed
 BookSim point. By default, errors are recorded and the sweep continues.
+
+## 3D Topology Viewer
+
+`topoanalyzer view` exports a static Three.js viewer with `index.html`,
+`scene.json`, `viewer.js`, `style.css`, and local `vendor/` runtime assets. The
+viewer supports rotate, pan, zoom, camera presets, labels, hover details, and
+per-link-class filters. Layouts are topology-specific for LLN, UBMesh, SlimNoC,
+Dragonfly, and Hypercube, with a generic fallback for other graph types. Static
+viewer assets live under `tools/topology_viewer/`.
 
 Example benchmark YAML files:
 
