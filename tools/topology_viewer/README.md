@@ -86,8 +86,14 @@ topoanalyzer view examples/systems/hypercube/ecube/hypercube_d4_ecube.yaml \
 - Right drag or `Shift` + drag: pan.
 - Camera buttons: switch topology-specific views.
 - Link checkboxes: show or hide link classes.
-- Labels toggle: show router labels.
-- Hover a router: inspect router metadata.
+- Labels toggle: show router and node labels.
+- Terminal/injection nodes are rendered as small cuboids with attachment links
+  back to their routers.
+- Hover a router, node, or link: inspect metadata.
+- Click a link: highlight the link and its two endpoints, greying out the rest.
+- Click a router: highlight the router and its incident links, greying out the
+  rest.
+- Click the scene again: clear the highlight.
 
 ## Remote Server Use
 

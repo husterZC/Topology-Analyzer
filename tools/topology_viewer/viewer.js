@@ -12,12 +12,20 @@ const camera = new THREE.PerspectiveCamera(45, 1, 0.05, 1000);
 const controls = createOrbitController(camera, renderer.domElement);
 
 const raycaster = new THREE.Raycaster();
+raycaster.params.Line.threshold = 0.12;
 const pointer = new THREE.Vector2();
 const nodeObjects = [];
 const labelObjects = [];
 const linkObjects = [];
 const linkGroups = new Map();
 const nodeGroups = new Map();
+const neutralColor = new THREE.Color(0x94a3b8);
+const highlightColor = new THREE.Color(0xfacc15);
+let labelsVisible = false;
+let linksVisible = true;
+let linkOpacityScale = 1;
+let selection = null;
+let pointerStart = null;
 
 initStaticScene();
 buildScene(sceneData);
@@ -27,8 +35,10 @@ applyCameraPreset(sceneData.layout.cameraPresets[0]);
 animate();
 
 window.addEventListener("resize", resize);
+canvas.addEventListener("pointerdown", onPointerStart);
 canvas.addEventListener("pointermove", onPointerMove);
-canvas.addEventListener("pointerleave", () => setHover(null));
+canvas.addEventListener("pointerleave", () => setInfoItem(null));
+canvas.addEventListener("click", onCanvasClick);
 
 function initStaticScene() {
   scene.add(new THREE.HemisphereLight(0xffffff, 0xd8e2ef, 1.25));
@@ -53,9 +63,11 @@ function initStaticScene() {
 }
 
 function buildScene(data) {
-  const nodeGeometry = new THREE.SphereGeometry(1, 18, 12);
+  const routerGeometry = new THREE.SphereGeometry(1, 18, 12);
+  const terminalGeometry = new THREE.BoxGeometry(1, 1, 1);
 
-  for (const link of data.links) {
+  data.links.forEach((link, index) => {
+    if (!link.id) link.id = `${link.src}->${link.dst}:${index}`;
     const material = new THREE.LineBasicMaterial({
       color: link.style.color,
       transparent: true,
@@ -65,23 +77,38 @@ function buildScene(data) {
     const points = linkPoints(link);
     const geometry = new THREE.BufferGeometry().setFromPoints(points);
     const object = new THREE.Line(geometry, material);
-    object.userData = { kind: "link", link, baseOpacity: link.style.opacity };
+    object.renderOrder = 1;
+    object.userData = {
+      kind: "link",
+      link,
+      baseColor: new THREE.Color(link.style.color),
+      baseOpacity: link.style.opacity,
+      enabled: true,
+    };
     scene.add(object);
     linkObjects.push(object);
     if (!linkGroups.has(link.group)) linkGroups.set(link.group, []);
     linkGroups.get(link.group).push(object);
-  }
+  });
 
   for (const node of data.nodes) {
+    const geometry = node.kind === "terminal" ? terminalGeometry : routerGeometry;
     const material = new THREE.MeshStandardMaterial({
       color: node.style.color,
       roughness: 0.48,
       metalness: 0.05,
+      transparent: true,
+      opacity: 1,
     });
-    const mesh = new THREE.Mesh(nodeGeometry, material);
+    const mesh = new THREE.Mesh(geometry, material);
     mesh.position.fromArray(node.position);
-    mesh.scale.setScalar(node.style.size);
-    mesh.userData = { kind: "node", node };
+    applyNodeScale(mesh, node, 1);
+    mesh.userData = {
+      kind: "node",
+      node,
+      baseColor: new THREE.Color(node.style.color),
+      baseScale: mesh.scale.clone(),
+    };
     scene.add(mesh);
     nodeObjects.push(mesh);
     if (!nodeGroups.has(node.group)) nodeGroups.set(node.group, []);
@@ -91,9 +118,16 @@ function buildScene(data) {
     label.position.copy(mesh.position);
     label.position.y += node.style.size * 1.8;
     label.visible = false;
+    label.userData = { nodeId: node.id };
     scene.add(label);
     labelObjects.push(label);
   }
+}
+
+function applyNodeScale(mesh, node, multiplier) {
+  const scale = node.style.scale || [1, 1, 1];
+  const size = Number(node.style.size || 0.1) * multiplier;
+  mesh.scale.set(size * scale[0], size * scale[1], size * scale[2]);
 }
 
 function linkPoints(link) {
@@ -148,7 +182,7 @@ function initUi(data) {
     ["Topology", data.system.topology_type],
     ["Routing", data.system.routing],
     ["Routers", data.system.router_count],
-    ["Terminals", data.system.terminal_count],
+    ["Nodes", data.system.terminal_count],
     ["Links", data.system.link_count],
   ].map(([key, value]) => `<div><strong>${key}:</strong> ${value}</div>`).join("");
 
@@ -165,18 +199,18 @@ function initUi(data) {
   }
 
   document.getElementById("labels-toggle").addEventListener("change", (event) => {
-    for (const label of labelObjects) label.visible = event.target.checked;
+    labelsVisible = event.target.checked;
+    updateVisualState();
   });
 
   document.getElementById("links-toggle").addEventListener("change", (event) => {
-    for (const link of linkObjects) link.visible = event.target.checked;
+    linksVisible = event.target.checked;
+    updateVisualState();
   });
 
   document.getElementById("opacity-slider").addEventListener("input", (event) => {
-    const scale = Number(event.target.value);
-    for (const link of linkObjects) {
-      link.material.opacity = link.userData.baseOpacity * scale;
-    }
+    linkOpacityScale = Number(event.target.value);
+    updateVisualState();
   });
 
   const filters = document.getElementById("link-filters");
@@ -191,7 +225,8 @@ function initUi(data) {
     const input = row.querySelector("input");
     input.addEventListener("change", () => {
       const objects = linkGroups.get(group.name) || [];
-      for (const object of objects) object.visible = input.checked;
+      for (const object of objects) object.userData.enabled = input.checked;
+      updateVisualState();
     });
     filters.appendChild(row);
   }
@@ -207,6 +242,7 @@ function initUi(data) {
     `;
     legend.appendChild(row);
   }
+  updateVisualState();
 }
 
 function applyCameraPreset(preset) {
@@ -226,26 +262,154 @@ function animate() {
   renderer.render(scene, camera);
 }
 
+function onPointerStart(event) {
+  pointerStart = { x: event.clientX, y: event.clientY };
+}
+
 function onPointerMove(event) {
+  if (selection) return;
+  const hit = pickSceneItem(event);
+  if (!hit) {
+    setInfoItem(null);
+    return;
+  }
+  setInfoItem(hit.userData);
+}
+
+function onCanvasClick(event) {
+  if (pointerStart) {
+    const dx = event.clientX - pointerStart.x;
+    const dy = event.clientY - pointerStart.y;
+    if (Math.hypot(dx, dy) > 4) return;
+  }
+  if (selection) {
+    selection = null;
+    updateVisualState();
+    setInfoItem(null);
+    return;
+  }
+  const hit = pickSceneItem(event);
+  if (!hit) return;
+  if (hit.userData.kind === "link") {
+    selectLink(hit.userData.link);
+  } else if (hit.userData.kind === "node") {
+    selectNode(hit.userData.node);
+  }
+}
+
+function pickSceneItem(event) {
   const rect = canvas.getBoundingClientRect();
   pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
   pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
   raycaster.setFromCamera(pointer, camera);
-  const hits = raycaster.intersectObjects(nodeObjects, false);
-  setHover(hits.length ? hits[0].object.userData.node : null);
+  const pickableLinks = linkObjects.filter((object) => object.visible);
+  const hits = raycaster.intersectObjects([...nodeObjects, ...pickableLinks], false);
+  return hits.length ? hits[0].object : null;
 }
 
-function setHover(node) {
+function selectLink(link) {
+  selection = {
+    kind: "link",
+    selectedNodeIds: new Set([link.src, link.dst]),
+    activeNodeIds: new Set([link.src, link.dst]),
+    activeLinkIds: new Set([link.id]),
+  };
+  updateVisualState();
+  setInfoItem({ kind: "link", link });
+}
+
+function selectNode(node) {
+  const activeNodeIds = new Set([node.id]);
+  const activeLinkIds = new Set();
+  for (const object of linkObjects) {
+    const link = object.userData.link;
+    if (link.src !== node.id && link.dst !== node.id) continue;
+    activeLinkIds.add(link.id);
+    activeNodeIds.add(link.src);
+    activeNodeIds.add(link.dst);
+  }
+  selection = {
+    kind: "node",
+    selectedNodeIds: new Set([node.id]),
+    activeNodeIds,
+    activeLinkIds,
+  };
+  updateVisualState();
+  setInfoItem({ kind: "node", node });
+}
+
+function updateVisualState() {
+  for (const object of nodeObjects) {
+    const node = object.userData.node;
+    const isSelected = selection?.selectedNodeIds.has(node.id) || false;
+    const isActive = !selection || selection.activeNodeIds.has(node.id);
+    object.material.color.copy(isActive ? object.userData.baseColor : neutralColor);
+    object.material.opacity = isActive ? 1 : 0.18;
+    const scale = isSelected ? 1.6 : isActive && selection ? 1.15 : 1;
+    object.scale.copy(object.userData.baseScale).multiplyScalar(scale);
+    object.renderOrder = isSelected ? 10 : 2;
+  }
+
+  for (const object of linkObjects) {
+    const link = object.userData.link;
+    const enabled = linksVisible && object.userData.enabled;
+    const isActive = !selection || selection.activeLinkIds.has(link.id);
+    object.visible = enabled;
+    object.material.color.copy(isActive ? object.userData.baseColor : neutralColor);
+    object.material.opacity = isActive
+      ? Math.min(1, object.userData.baseOpacity * linkOpacityScale)
+      : 0.08;
+    if (selection && isActive) {
+      object.material.color.copy(highlightColor);
+      object.material.opacity = 0.95;
+      object.renderOrder = 20;
+    } else {
+      object.renderOrder = 1;
+    }
+  }
+
+  for (const label of labelObjects) {
+    const nodeId = label.userData.nodeId;
+    const isSelected = selection?.selectedNodeIds.has(nodeId) || false;
+    label.visible = labelsVisible || isSelected;
+  }
+}
+
+function setInfoItem(item) {
   const card = document.getElementById("hover-card");
-  if (!node) {
-    card.textContent = "Hover a router";
+  if (!item) {
+    card.textContent = "No selection";
     return;
   }
+  if (item.kind === "link") {
+    const link = item.link;
+    const meta = Object.entries(link.metadata || {})
+      .map(([key, value]) => `<div>${key}: ${formatValue(value)}</div>`)
+      .join("");
+    card.innerHTML = `<strong>${link.src} -> ${link.dst}</strong><div>${link.group}</div>${meta}`;
+    return;
+  }
+  const node = item.node;
+  const shownKeys = [
+    "coord",
+    "group",
+    "subgroup",
+    "position",
+    "bits",
+    "layer_role",
+    "router",
+    "attached_router",
+    "terminal_index",
+  ];
   const meta = Object.entries(node.metadata || {})
-    .filter(([key]) => ["coord", "group", "subgroup", "position", "bits", "layer_role", "router"].includes(key))
-    .map(([key, value]) => `<div>${key}: ${Array.isArray(value) ? value.join(".") : value}</div>`)
+    .filter(([key]) => shownKeys.includes(key))
+    .map(([key, value]) => `<div>${key}: ${formatValue(value)}</div>`)
     .join("");
   card.innerHTML = `<strong>${node.id}</strong><div>${node.group}</div>${meta}`;
+}
+
+function formatValue(value) {
+  return Array.isArray(value) ? value.join(".") : value;
 }
 
 function createOrbitController(cameraObject, element) {

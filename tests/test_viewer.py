@@ -46,8 +46,30 @@ class ViewerTests(unittest.TestCase):
                     scene["system"]["router_count"],
                     len(system.graph.routers()),
                 )
-                self.assertEqual(len(scene["nodes"]), len(system.graph.routers()))
+                terminal_nodes = [
+                    node for node in scene["nodes"] if node["kind"] == "terminal"
+                ]
+                self.assertEqual(
+                    len(scene["nodes"]),
+                    len(system.graph.routers()) + scene["system"]["terminal_count"],
+                )
+                self.assertEqual(
+                    len(terminal_nodes),
+                    scene["system"]["terminal_count"],
+                )
+                self.assertTrue(
+                    all(
+                        node["metadata"].get("attached_router")
+                        for node in terminal_nodes
+                    )
+                )
                 self.assertGreater(len(scene["links"]), 0)
+                self.assertTrue(
+                    any(
+                        link["kind"] == "terminal_attachment"
+                        for link in scene["links"]
+                    )
+                )
                 self.assertGreater(len(scene["legend"]["linkGroups"]), 0)
                 for node in scene["nodes"]:
                     self.assertEqual(len(node["position"]), 3)

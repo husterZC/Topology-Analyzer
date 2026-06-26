@@ -70,11 +70,13 @@ rate remains in the CSV so each plotted point can be traced back to the
 requested load.
 
 `results/metrics.txt` summarizes each benchmarked system's static network
-characteristics: terminal/injection nodes, routers, directed links, exact
-router-hop diameter, and bisection bandwidth. The bisection entry includes a
-method field because small systems use an exact balanced router cut, while
-larger systems use a topology formula or coordinate-axis cut when exact
-enumeration would be too expensive.
+characteristics: terminal/injection nodes, routers, directed links, maximum
+router radix, exact router-hop diameter, and bisection bandwidth. The maximum
+router radix counts outgoing router-router links plus locally attached
+terminal/injection ports. The bisection entry includes a method field because
+small systems use an exact balanced router cut, while larger systems use a
+topology formula or coordinate-axis cut when exact enumeration would be too
+expensive.
 
 ### Fields
 

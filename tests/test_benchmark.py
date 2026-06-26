@@ -81,6 +81,7 @@ class BenchmarkTests(unittest.TestCase):
             self.assertIn("nodes: 4", metrics_text)
             self.assertIn("routers: 4", metrics_text)
             self.assertIn("links: 8", metrics_text)
+            self.assertIn("max_router_radix: 3", metrics_text)
             self.assertIn("diameter: 2", metrics_text)
             self.assertIn("bisection_bandwidth: 128GB/s", metrics_text)
             self.assertIn("bisection_method: exact_balanced_router_cut", metrics_text)

@@ -25,6 +25,7 @@ class NetworkMetrics:
     routers: int
     graph_nodes: int
     links: int
+    max_router_radix: int | None
     diameter: int | None
     bisection_bandwidth: str
     bisection_method: str
@@ -62,6 +63,8 @@ def metrics_text(systems: list[System]) -> str:
         "  routers: router nodes in the topology graph.",
         "  graph_nodes: explicit nodes stored in the topology graph.",
         "  links: directed router-router links stored in the topology graph.",
+        "  max_router_radix: maximum router output radix, counted as outgoing "
+        "router-router links plus locally attached terminal/injection ports.",
         "  diameter: exact directed router-hop diameter over router nodes.",
         "  bisection_bandwidth: one-way aggregate bandwidth across a balanced router bisection when exact, or the documented method otherwise.",
         "",
@@ -84,6 +87,7 @@ def summarize_system(system: System) -> NetworkMetrics:
         routers=len(graph.routers()),
         graph_nodes=len(graph.nodes),
         links=len(graph.links),
+        max_router_radix=_max_router_radix(graph),
         diameter=_router_diameter(graph),
         bisection_bandwidth=bisection.formatted,
         bisection_method=bisection.method,
@@ -101,6 +105,7 @@ def _format_system_metrics(metrics: NetworkMetrics) -> list[str]:
         f"routers: {metrics.routers}",
         f"graph_nodes: {metrics.graph_nodes}",
         f"links: {metrics.links}",
+        f"max_router_radix: {_format_optional_int(metrics.max_router_radix)}",
         f"diameter: {_format_optional_int(metrics.diameter)}",
         f"bisection_bandwidth: {metrics.bisection_bandwidth}",
         f"bisection_method: {metrics.bisection_method}",
@@ -138,6 +143,61 @@ def _terminal_node_count(graph: TopologyGraph) -> int:
         return sum(int(item.get("count", 0)) for item in attachments if isinstance(item, dict))
 
     return len(graph.routers()) * int(graph.metadata.get("concentration", 1))
+
+
+def _max_router_radix(graph: TopologyGraph) -> int | None:
+    router_ids = {node.id for node in graph.routers()}
+    if not router_ids:
+        return None
+
+    router_outputs = {router_id: 0 for router_id in router_ids}
+    terminal_neighbors: dict[str, set[str]] = {
+        router_id: set() for router_id in router_ids
+    }
+    terminal_ids = {
+        node.id for node in graph.nodes.values() if node.kind == "terminal"
+    }
+    for link in graph.links:
+        if link.src in router_ids and link.dst in router_ids:
+            router_outputs[link.src] += 1
+        elif link.src in router_ids and link.dst in terminal_ids:
+            terminal_neighbors[link.src].add(link.dst)
+        elif link.dst in router_ids and link.src in terminal_ids:
+            terminal_neighbors[link.dst].add(link.src)
+
+    if any(terminal_neighbors.values()):
+        local_ports = {
+            router_id: len(neighbors)
+            for router_id, neighbors in terminal_neighbors.items()
+        }
+    else:
+        local_ports = _implicit_terminal_ports(graph, router_ids)
+
+    return max(
+        router_outputs[router_id] + local_ports.get(router_id, 0)
+        for router_id in router_ids
+    )
+
+
+def _implicit_terminal_ports(
+    graph: TopologyGraph,
+    router_ids: set[str],
+) -> dict[str, int]:
+    attachments = graph.metadata.get("terminal_attachments")
+    if isinstance(attachments, list) and attachments:
+        counts = {router_id: 0 for router_id in router_ids}
+        for item in attachments:
+            if not isinstance(item, dict):
+                continue
+            router_id = item.get("router_id")
+            if router_id in router_ids:
+                counts[router_id] += int(item.get("count", 0))
+        return counts
+
+    concentration = graph.metadata.get("concentration")
+    if concentration is None:
+        return {router_id: 0 for router_id in router_ids}
+    return {router_id: int(concentration) for router_id in router_ids}
 
 
 def _router_diameter(graph: TopologyGraph) -> int | None:
