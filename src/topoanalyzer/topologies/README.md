@@ -61,6 +61,42 @@ These formulas describe the graph models implemented in this repository.
 For topologies with explicit dimensions, the implementation has no fixed
 mathematical maximum beyond memory/runtime limits and validation constraints.
 
+## Max Router Radix
+
+`max_router_radix` is the maximum outgoing router-router channel count plus
+locally attached terminal/injection ports. This is the same metric emitted in
+benchmark `metrics.txt`.
+
+| Topology | Max Router Radix |
+|---|---:|
+| `mesh2d` | `c + min(2,x-1) + min(2,y-1)` |
+| `mesh3d` | `c + min(2,x-1) + min(2,y-1) + min(2,z-1)` |
+| `torus2d` | `c + 4` |
+| `torus3d` | `c + 6` |
+| `ruche3d` non-wrap | `c + sum_A (min(2,L_A-1) + r_A)` |
+| `hypercube` | `c + d` |
+| `dragonfly` | `p + (a-1) + min(h,g-1)` |
+| `dragonfly` default full | `p + (a-1) + h` |
+| `slimnoc` | `p + (3*q-delta)/2` |
+| `ubmesh` | `c + sum_i (L_i-1)` |
+| `lln` | `c + (T-1) + max(d_core, d_long_max)` |
+| `fattree` | `r` |
+
+For non-wrap `ruche3d`, `A in {x,y,z}`, `L_A` is the axis length, `s_A` is the
+axis stride, and `r_A` is the maximum ruche-link degree in that axis:
+
+```text
+r_A = 1 if s_A < L_A <= 2*s_A
+r_A = 2 if L_A > 2*s_A
+```
+
+For wrap `ruche3d`, the ruche-link contribution is `1` in an axis when the
+normalized stride is exactly half of an even axis length, otherwise `2`.
+
+For `lln`, `d_core = min(2,x-1)+min(2,y-1)` is the maximum core-mesh degree,
+and `d_long_max` is the maximum long-link degree after the LLN placement
+algorithm. The placement enforces `d_long_max <= horizontal_ports`.
+
 ## Diameter
 
 | Topology | Router-Hop Diameter |
