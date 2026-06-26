@@ -432,7 +432,10 @@ def _layout_coord(
     if layout == "basic":
         return [subgroup * q + position, subgroup_type]
     group_side = _square_side(q)
-    if group_side is not None:
+    if (
+        layout in {"group", "figure7b", "paper_figure7b", "sn_l"}
+        and group_side is not None
+    ):
         group_x = subgroup % group_side
         group_y = subgroup // group_side
         return [group_x * (2 * q) + subgroup_type * q + position, group_y]

@@ -148,8 +148,8 @@ class UBMeshLayout(LayoutStrategy):
 
 
 class SlimNoCLayout(LayoutStrategy):
-    name = "slimnoc_two_planes"
-    description = "SlimNoC/SlimFly subgroups split into two algebraic planes."
+    name = "slimnoc_groups"
+    description = "SlimNoC/SlimFly groups with algebraic subgroups and cross links."
 
     def supports(self, graph: TopologyGraph) -> bool:
         return graph.topology_type == "slimnoc"
@@ -159,6 +159,22 @@ class SlimNoCLayout(LayoutStrategy):
         subgroup = int(node.metadata.get("subgroup", 0))
         position = int(node.metadata.get("position", 0))
         q = int(graph.metadata.get("q", 1))
+        group_side = _square_side(q)
+        if _uses_slimnoc_group_layout(graph) and group_side is not None:
+            pos_side = group_side
+            group_x = subgroup % group_side
+            group_z = subgroup // group_side
+            pos_x = position % pos_side
+            pos_z = position // pos_side
+            group_gap = max(4.4, q * 0.55)
+            return (
+                (group_x - (group_side - 1) / 2.0) * group_gap
+                + (pos_x - (pos_side - 1) / 2.0) * 0.58,
+                (subgroup_type - 0.5) * 0.95,
+                (group_z - (group_side - 1) / 2.0) * group_gap
+                + (pos_z - (pos_side - 1) / 2.0) * 0.58,
+            )
+
         plane = -1 if subgroup_type == 0 else 1
         return (
             plane * max(3.0, q * 0.55),
@@ -179,10 +195,33 @@ class SlimNoCLayout(LayoutStrategy):
         if link_class == "intra_1":
             return LinkStyle("#4ade80", 0.28, 0.7, "intra subgraph 1")
         if link_class == "cross":
-            return LinkStyle("#f97316", 0.42, 1.0, "cross links", curve_height=0.55)
+            left = link.metadata.get("left_subgroup")
+            right = link.metadata.get("right_subgroup")
+            if left == right:
+                return LinkStyle(
+                    "#f97316",
+                    0.38,
+                    0.9,
+                    "local cross links",
+                    curve_height=0.2,
+                )
+            return LinkStyle(
+                "#dc2626",
+                0.24,
+                1.0,
+                "inter-group cross links",
+                curve_height=1.15,
+            )
         return super().link_style(link, graph)
 
     def camera_presets(self, graph: TopologyGraph) -> list[CameraPreset]:
+        q = int(graph.metadata.get("q", 1))
+        if _uses_slimnoc_group_layout(graph) and _square_side(q) is not None:
+            return [
+                CameraPreset("paper", (0.0, 17.0, 0.001), (0.0, 0.0, 0.0)),
+                CameraPreset("groups", (10.5, 8.0, 12.0), (0.0, 0.0, 0.0)),
+                CameraPreset("cross", (0.0, 7.5, 15.5), (0.0, 0.0, 0.0)),
+            ]
         return [
             CameraPreset("paper", (0.0, 0.0, 15.0), (0.0, 0.0, 0.0)),
             CameraPreset("exploded", (12.0, 9.0, 14.0), (0.0, 0.0, 0.0)),
@@ -309,6 +348,18 @@ _HASH_COLORS = [
     "#dc2626",
     "#475569",
 ]
+
+
+def _uses_slimnoc_group_layout(graph: TopologyGraph) -> bool:
+    layout = str(graph.metadata.get("layout", "group"))
+    return layout in {"group", "figure7b", "paper_figure7b", "sn_l"}
+
+
+def _square_side(value: int) -> int | None:
+    side = int(sqrt(value))
+    if side * side == value:
+        return side
+    return None
 
 
 def _coord(node: Node) -> tuple[int, ...]:

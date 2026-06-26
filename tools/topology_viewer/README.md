@@ -69,6 +69,9 @@ Open `views/lln_4x4x5/index.html` in a browser.
 topoanalyzer view examples/systems/slimnoc/min/slimnoc_q5_p4_min.yaml \
   --output-dir views/slimnoc_q5_p4
 
+topoanalyzer view examples/systems/slimnoc/figure7b/slimnoc_figure7b_snl_q9_p8_min.yaml \
+  --output-dir views/slimnoc_figure7b_snl_q9_p8
+
 topoanalyzer view examples/systems/ubmesh/dor/ubmesh_8x8_dor.yaml \
   --output-dir views/ubmesh_8x8
 
@@ -86,6 +89,9 @@ topoanalyzer view examples/systems/hypercube/ecube/hypercube_d4_ecube.yaml \
 - Right drag or `Shift` + drag: pan.
 - Camera buttons: switch topology-specific views.
 - Link checkboxes: show or hide link classes.
+- For SlimNoC Figure 7(b), `local cross links` are the shown intra-group
+  vertical links and `inter-group cross links` are the omitted full-system
+  connections.
 - Labels toggle: show router and node labels.
 - Terminal/injection nodes are rendered as small cuboids with attachment links
   back to their routers.

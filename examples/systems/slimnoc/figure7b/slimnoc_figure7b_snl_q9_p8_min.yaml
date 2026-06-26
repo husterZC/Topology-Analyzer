@@ -1,0 +1,17 @@
+name: slimnoc_figure7b_snl_q9_p8_min
+topology:
+  type: slimnoc
+  params:
+    q: 9
+    concentration: 8
+    layout: paper_figure7b
+links:
+  default:
+    latency_cycles: 1
+    bandwidth: 64GB/s
+  classes:
+    cross:
+      latency_cycles: 2
+      bandwidth: 128GB/s
+routing:
+  type: slimnoc_min

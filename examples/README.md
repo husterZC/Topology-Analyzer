@@ -38,6 +38,7 @@ examples/
       valiant_hash/  3D ruche systems with static Valiant-style hashed routing
       xyz/           3D ruche systems with express-link XYZ routing
     slimnoc/
+      figure7b/      Paper Figure 7(b) SN-L q=9, p=8 full-system view
       min/           SlimNoC systems with static minimum routing
       valiant_hash/  SlimNoC systems with static Valiant-style hashed routing
     torus2d/
@@ -79,6 +80,7 @@ topoanalyzer validate examples/systems/dragonfly/valiant_hash/dragonfly_p2_a4_h2
 topoanalyzer validate examples/systems/slimnoc/min/slimnoc_q5_p4_min.yaml
 topoanalyzer validate examples/systems/slimnoc/min/slimnoc_q8_p8_min.yaml
 topoanalyzer validate examples/systems/slimnoc/min/slimnoc_q9_p8_min.yaml
+topoanalyzer validate examples/systems/slimnoc/figure7b/slimnoc_figure7b_snl_q9_p8_min.yaml
 topoanalyzer validate examples/systems/slimnoc/valiant_hash/slimnoc_q5_p4_valiant_hash.yaml
 topoanalyzer validate examples/systems/ubmesh/shortest/ubmesh_8x8_shortest.yaml
 topoanalyzer validate examples/systems/ubmesh/dor/ubmesh_8x8_dor.yaml
@@ -90,5 +92,5 @@ topoanalyzer validate examples/systems/mesh2d/graph_updown/mesh2d_4x4_graph_updo
 topoanalyzer benchmark examples/benchmarks/mesh2d/latency_vs_injection_mesh2d_scales.yaml --dry-run
 topoanalyzer benchmark examples/benchmarks/comparisons/latency_vs_injection_fattree_r8_l4_vs_mesh_16x16.yaml --dry-run
 topoanalyzer benchmark examples/benchmarks/system_regression/latency_vs_injection_booksim_smoke.yaml --no-progress
-topoanalyzer view examples/systems/slimnoc/min/slimnoc_q5_p4_min.yaml --output-dir views/slimnoc_q5_p4
+topoanalyzer view examples/systems/slimnoc/figure7b/slimnoc_figure7b_snl_q9_p8_min.yaml --output-dir views/slimnoc_figure7b_snl_q9_p8
 ```

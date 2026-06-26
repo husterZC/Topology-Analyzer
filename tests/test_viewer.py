@@ -95,6 +95,43 @@ class ViewerTests(unittest.TestCase):
             self.assertNotIn("__SCENE_JSON__", html)
             self.assertIn(system.name, html)
 
+    def test_slimnoc_figure7b_scene_separates_intergroup_links(self):
+        system = _system(
+            "slimnoc",
+            {"q": 9, "concentration": 8, "layout": "paper_figure7b"},
+            "slimnoc_min",
+        )
+
+        scene = build_scene(system)
+
+        self.assertEqual(scene["system"]["router_count"], 162)
+        self.assertEqual(scene["system"]["terminal_count"], 1296)
+        self.assertEqual(scene["layout"]["name"], "slimnoc_groups")
+        link_groups = {group["name"] for group in scene["legend"]["linkGroups"]}
+        self.assertIn("local cross links", link_groups)
+        self.assertIn("inter-group cross links", link_groups)
+
+        counts = {}
+        for link in scene["links"]:
+            if link.get("kind") == "network":
+                counts[link["group"]] = counts.get(link["group"], 0) + 1
+
+        self.assertEqual(counts["local cross links"], 162)
+        self.assertEqual(counts["inter-group cross links"], 1296)
+
+        nodes = {node["id"]: node for node in scene["nodes"]}
+        self.assertGreater(
+            abs(
+                nodes["sn.g0.a1.b0"]["position"][0]
+                - nodes["sn.g0.a0.b0"]["position"][0]
+            ),
+            3.0,
+        )
+        self.assertNotEqual(
+            nodes["sn.g0.a0.b0"]["position"][1],
+            nodes["sn.g1.a0.b0"]["position"][1],
+        )
+
     def test_view_cli_exports_index(self):
         system_file = (
             Path(__file__).resolve().parents[1]
