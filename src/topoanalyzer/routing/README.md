@@ -30,12 +30,22 @@ freedom through the VC-aware channel dependency graph.
 | `hypercube` | `hypercube_ecube` | Deterministic E-cube bit-order routing. |
 | `hypercube` | `hypercube_lash` | Minimal path-diversity routing with LASH-style VC assignment. |
 | `hypercube` | `hypercube_valiant_hash` | Static Valiant-style hashed intermediate routing. |
+| `hypercube` | `hypercube_min_adaptive_runtime` | BookSim runtime minimal-adaptive routing with E-cube escape VC. |
+| `hypercube` | `hypercube_valiant_runtime` | BookSim runtime Valiant intermediate-node baseline. |
+| `hypercube` | `hypercube_ugal_l_runtime` | BookSim runtime local UGAL-style minimal-vs-Valiant routing. |
 | `hypercube` and most connected graphs | `graph_updown`, `graph_lash` | Topology-agnostic graph routing baselines. |
 | `dragonfly` | `dragonfly_min` | Minimal local/global/local routing with VC phase split. |
 | `dragonfly` | `dragonfly_valiant_hash` | Static VALg-style hashed intermediate-group routing. |
+| `dragonfly` | `dragonfly_ugal_l_runtime` | BookSim runtime local UGAL-style adaptive routing. |
+| `dragonfly` | `dragonfly_valg_runtime` | BookSim runtime Valiant-global baseline. |
+| `dragonfly` | `dragonfly_valn_runtime` | BookSim runtime Valiant-node baseline. |
+| `dragonfly` | `dragonfly_par_runtime` | BookSim runtime PAR-style progressive adaptive routing approximation. |
 | `dragonfly` and most connected graphs | `graph_updown`, `graph_lash` | Generic graph baselines; runtime UGAL/PAR are not table routes. |
 | `slimnoc` | `slimnoc_min` | Paper-faithful static shortest-path routing with VC phase split. |
 | `slimnoc` | `slimnoc_valiant_hash` | Static Valiant-style hashed intermediate-router routing. |
+| `slimnoc` | `slimnoc_ugal_l_runtime` | BookSim runtime local UGAL routing for SlimNoC/SlimFly. |
+| `slimnoc` | `slimnoc_ugal_g_runtime` | BookSim runtime UGAL-G-style multi-candidate routing approximation. |
+| `slimnoc` | `slimnoc_valiant_runtime` | BookSim runtime Valiant intermediate-router baseline. |
 | `slimnoc` and most connected graphs | `graph_updown`, `graph_lash` | Generic graph baselines; runtime UGAL is not a table route. |
 | `ubmesh` | `ubmesh_shortest` | Minimum-hop nD-FullMesh baseline with latency-ordered dimension fixes. |
 | `ubmesh` | `ubmesh_dor` | Deterministic dimension-order baseline. |
@@ -45,6 +55,7 @@ freedom through the VC-aware channel dependency graph.
 | `ubmesh` and most connected graphs | `graph_updown`, `graph_lash` | Generic graph baselines when UBMesh-specific routes are not desired. |
 | `lln` | `lln_table` | Paper-style deterministic long-link table routing with 3-VC phase split. |
 | `lln` | `lln_dor_fallback` | Same LLN table routing, explicitly allowing core-mesh DOR fallback for partial coverage. |
+| `lln` | `lln_adaptive_layer_runtime` | BookSim runtime adaptive-layer extension; not a paper baseline. |
 | `fattree` | `fattree_lca` | Simple deterministic nearest-common-ancestor baseline. |
 | `fattree` | `fattree_nca_hash` | Balanced static ECMP-style nearest-common-ancestor baseline. |
 | `fattree` | `fattree_dmodk` | Deterministic D-mod-k-style modulo baseline. |

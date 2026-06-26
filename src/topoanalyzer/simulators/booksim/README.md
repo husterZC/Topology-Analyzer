@@ -65,12 +65,13 @@ booksim:
 Supported values:
 
 - `auto`: choose `stock_fattree` for `fattree_anca`,
-  `ubmesh_apr_runtime` for `ubmesh_apr_runtime`, otherwise use `anynet_table`.
+  `anynet_runtime` for BookSim runtime marker routes, otherwise use
+  `anynet_table`.
 - `anynet_table`: default custom backend. Emits BookSim `anynet` topology plus a generated route table.
 - `stock_mesh`: legacy compatibility backend for stock BookSim mesh experiments.
 - `stock_fattree`: native BookSim Fat-tree backend for `fattree_anca`.
-- `ubmesh_apr_runtime`: BookSim `anynet` topology plus a runtime
-  `ubmesh_apr` routing function for `ubmesh_apr_runtime`.
+- `anynet_runtime`: BookSim `anynet` topology plus a runtime routing function.
+  The alias `ubmesh_apr_runtime` is still accepted.
 
 ## Generated Config
 
@@ -257,7 +258,7 @@ homogeneous link bandwidth metadata
 Use `anynet_table` for `fattree_nca_hash`, `fattree_dmodk`, and
 `fattree_dmodc`.
 
-## Runtime `ubmesh_apr_runtime` Backend
+## Runtime `anynet_runtime` Backend
 
 For:
 
@@ -270,7 +271,7 @@ with:
 
 ```yaml
 routing:
-  type: ubmesh_apr_runtime
+  type: dragonfly_ugal_l_runtime
 ```
 
 the backend writes `anynet.net`, `anynet_mapping.json`, and a `booksim.cfg`
@@ -278,16 +279,25 @@ without `anynet.routes`:
 
 ```text
 topology = anynet;
-routing_function = ubmesh_apr;
+routing_function = dragonfly_ugal_l;
 network_file = <generated anynet.net>;
-ubmesh_apr_dimensions = <comma-separated dimensions>;
-ubmesh_apr_seed = <seed>;
-ubmesh_apr_vl_policy = tfc_two_virtual_lanes;
+anynet_runtime_seed = <seed>;
+anynet_runtime_candidates = <candidate-count>;
+anynet_runtime_threshold = <credit-threshold>;
 ```
 
-This path is for a BookSim build that implements a runtime `ubmesh_apr`
-routing function. Unlike `ubmesh_apr_hash` and `ubmesh_tfc`, it is not a static
-route table. The generated config requires at least `num_vcs: 2`.
+This path is for a BookSim build with Topology-Analyzer's adaptive anynet
+overlay. Unlike static hash/table routes, runtime routes choose output ports
+inside BookSim using local credit pressure. The generated config enforces each
+algorithm's minimum `num_vcs`.
+
+Supported runtime function names generated today:
+
+- `ubmesh_apr`
+- `dragonfly_ugal_l`, `dragonfly_valg`, `dragonfly_valn`, `dragonfly_par`
+- `hypercube_min_adaptive`, `hypercube_valiant`, `hypercube_ugal_l`
+- `slimnoc_ugal_l`, `slimnoc_ugal_g`, `slimnoc_valiant`
+- `lln_adaptive_layer`
 
 Unsupported examples:
 
@@ -324,11 +334,12 @@ Topology-Analyzer. Use `anynet_table` for those systems.
 
 ## Remaining Backend Work
 
-The default backend now covers arbitrary graph lowering, per-link latency, and
-table-driven routing. Remaining work:
+The default backend now covers arbitrary graph lowering, per-link latency,
+table-driven routing, and runtime credit-based adaptive anynet routing.
+Remaining work:
 
 - true per-link bandwidth in BookSim channel behavior,
-- additional true adaptive routing functions that can inspect runtime credit or
-  queue state, for example UGAL-style Dragonfly routing,
+- deeper topology-specific runtime policies beyond the first generic anynet
+  UGAL/Valiant/minimal-adaptive engine,
 - optional directed-only links if a future topology needs one-way channels,
 - richer parser support for additional BookSim output modes.

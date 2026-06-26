@@ -282,9 +282,33 @@ class TopologyExpansionTests(unittest.TestCase):
                 {},
             ),
             (
+                "hypercube",
+                {"dimension": 4},
+                {"type": "hypercube_min_adaptive_runtime", "seed": 0},
+                {},
+            ),
+            (
+                "hypercube",
+                {"dimension": 4},
+                {"type": "hypercube_ugal_l_runtime", "seed": 0},
+                {},
+            ),
+            (
                 "dragonfly",
                 {"p": 2, "a": 4, "h": 2},
                 {"type": "dragonfly_valiant_hash", "seed": 0},
+                {"global": {"latency_cycles": 3, "bandwidth": "128GB/s"}},
+            ),
+            (
+                "dragonfly",
+                {"p": 2, "a": 4, "h": 2},
+                {"type": "dragonfly_ugal_l_runtime", "seed": 0},
+                {"global": {"latency_cycles": 3, "bandwidth": "128GB/s"}},
+            ),
+            (
+                "dragonfly",
+                {"p": 2, "a": 4, "h": 2},
+                {"type": "dragonfly_valn_runtime", "seed": 0},
                 {"global": {"latency_cycles": 3, "bandwidth": "128GB/s"}},
             ),
             (
@@ -292,6 +316,30 @@ class TopologyExpansionTests(unittest.TestCase):
                 {"q": 5, "concentration": 4},
                 {"type": "slimnoc_valiant_hash", "seed": 0},
                 {"cross": {"latency_cycles": 2, "bandwidth": "128GB/s"}},
+            ),
+            (
+                "slimnoc",
+                {"q": 5, "concentration": 4},
+                {"type": "slimnoc_ugal_l_runtime", "seed": 0},
+                {"cross": {"latency_cycles": 2, "bandwidth": "128GB/s"}},
+            ),
+            (
+                "slimnoc",
+                {"q": 5, "concentration": 4},
+                {"type": "slimnoc_ugal_g_runtime", "seed": 0},
+                {"cross": {"latency_cycles": 2, "bandwidth": "128GB/s"}},
+            ),
+            (
+                "slimnoc",
+                {"q": 5, "concentration": 4},
+                {"type": "slimnoc_valiant_runtime", "seed": 0},
+                {"cross": {"latency_cycles": 2, "bandwidth": "128GB/s"}},
+            ),
+            (
+                "lln",
+                {"x": 2, "y": 2, "layers": 3},
+                {"type": "lln_adaptive_layer_runtime", "seed": 0},
+                {"long": {"latency_cycles": 2, "bandwidth": "128GB/s"}},
             ),
         ]
 

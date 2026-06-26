@@ -1,0 +1,17 @@
+name: hypercube_d4_min_adaptive_runtime
+
+topology:
+  type: hypercube
+  params:
+    dimension: 4
+
+links:
+  default:
+    latency_cycles: 1
+    bandwidth: 64GB/s
+
+routing:
+  type: hypercube_min_adaptive_runtime
+  seed: 0
+  candidates: 4
+  adaptive_threshold: 0

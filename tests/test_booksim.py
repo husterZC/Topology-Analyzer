@@ -198,10 +198,67 @@ class BookSimTests(unittest.TestCase):
             }
         )
 
-        with self.assertRaisesRegex(BookSimUnsupportedError, "at least two VCs"):
+        with self.assertRaisesRegex(BookSimUnsupportedError, "at least 2 VCs"):
             BookSimConfigGenerator(backend="auto").generate(
                 system,
                 BookSimOptions(traffic="uniform", injection_rate=0.01, num_vcs=1),
+                network_file="/tmp/anynet.net",
+            )
+
+    def test_runtime_dragonfly_ugal_backend_materializes_without_route_table(self):
+        system = build_system_from_dict(
+            {
+                "name": "dragonfly_p2_a4_h2_ugal",
+                "topology": {
+                    "type": "dragonfly",
+                    "params": {"p": 2, "a": 4, "h": 2},
+                },
+                "links": {
+                    "default": {"latency_cycles": 1, "bandwidth": "64GB/s"},
+                },
+                "routing": {
+                    "type": "dragonfly_ugal_l_runtime",
+                    "seed": 3,
+                    "candidates": 5,
+                    "adaptive_threshold": 7,
+                },
+            }
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = BookSimBackend(backend="auto").materialize(
+                system,
+                BookSimOptions(traffic="uniform", injection_rate=0.01, num_vcs=3),
+                Path(tmpdir),
+            )
+            config = config_path.read_text(encoding="utf-8")
+
+            self.assertIn("routing_function = dragonfly_ugal_l;", config)
+            self.assertIn("anynet_runtime_seed = 3;", config)
+            self.assertIn("anynet_runtime_candidates = 5;", config)
+            self.assertIn("anynet_runtime_threshold = 7;", config)
+            self.assertTrue((Path(tmpdir) / "anynet.net").exists())
+            self.assertFalse((Path(tmpdir) / "anynet.routes").exists())
+
+    def test_runtime_dragonfly_par_enforces_required_vcs(self):
+        system = build_system_from_dict(
+            {
+                "name": "dragonfly_p2_a4_h2_par",
+                "topology": {
+                    "type": "dragonfly",
+                    "params": {"p": 2, "a": 4, "h": 2},
+                },
+                "links": {
+                    "default": {"latency_cycles": 1, "bandwidth": "64GB/s"},
+                },
+                "routing": {"type": "dragonfly_par_runtime"},
+            }
+        )
+
+        with self.assertRaisesRegex(BookSimUnsupportedError, "at least 5 VCs"):
+            BookSimConfigGenerator(backend="auto").generate(
+                system,
+                BookSimOptions(traffic="uniform", injection_rate=0.01, num_vcs=4),
                 network_file="/tmp/anynet.net",
             )
 

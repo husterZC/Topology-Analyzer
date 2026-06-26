@@ -1,0 +1,23 @@
+name: dragonfly_p2_a4_h2_ugal_l_runtime
+
+topology:
+  type: dragonfly
+  params:
+    p: 2
+    a: 4
+    h: 2
+
+links:
+  default:
+    latency_cycles: 1
+    bandwidth: 64GB/s
+  classes:
+    global:
+      latency_cycles: 3
+      bandwidth: 128GB/s
+
+routing:
+  type: dragonfly_ugal_l_runtime
+  seed: 0
+  candidates: 4
+  adaptive_threshold: 0

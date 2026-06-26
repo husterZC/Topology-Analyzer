@@ -1,0 +1,443 @@
+--- a/src/booksim_config.cpp
++++ b/src/booksim_config.cpp
+@@ -315,6 +315,14 @@
+   //==================Network file===========================
+   AddStrField("network_file","");
+   AddStrField("route_table_file","");
++  _int_map["anynet_runtime_seed"] = 0;
++  _int_map["anynet_runtime_candidates"] = 4;
++  _int_map["anynet_runtime_threshold"] = 0;
++  AddStrField("ubmesh_apr_dimensions","");
++  _int_map["ubmesh_apr_seed"] = 0;
++  AddStrField("ubmesh_apr_vl_policy","");
++  _int_map["ubmesh_apr_minimal_candidates"] = 1;
++  _int_map["ubmesh_apr_detour_candidates"] = 1;
+ }
+ 
+ 
+--- a/src/networks/anynet.hpp
++++ b/src/networks/anynet.hpp
+@@ -47,6 +47,8 @@
+   //stores minimal routing information from every router to every node
+   //[router][dest_node]=(port, vc)
+   vector<map<int, pair<int, int> > > routing_table;
++  //[router][dest_node]=shortest weighted distance
++  vector<map<int, int> > routing_distance_table;
+ 
+   void _ComputeSize( const Configuration &config );
+   void _BuildNet( const Configuration &config );
+@@ -69,4 +71,12 @@
+ 
+ void min_anynet( const Router *r, const Flit *f, int in_channel, 
+ 		      OutputSet *outputs, bool inject );
++void anynet_min_adaptive( const Router *r, const Flit *f, int in_channel,
++		      OutputSet *outputs, bool inject );
++void anynet_valiant( const Router *r, const Flit *f, int in_channel,
++		      OutputSet *outputs, bool inject );
++void anynet_ugal_l( const Router *r, const Flit *f, int in_channel,
++		      OutputSet *outputs, bool inject );
++void anynet_par( const Router *r, const Flit *f, int in_channel,
++		      OutputSet *outputs, bool inject );
+ #endif
+--- a/src/networks/anynet.cpp
++++ b/src/networks/anynet.cpp
+@@ -58,6 +58,26 @@
+ //this is a hack, I can't easily get the routing talbe out of the network
+ map<int, pair<int, int> >* global_routing_table;
+ map<int, int>* global_node_list;
++map<int, int>* global_anynet_distance_table;
++map<int, map<int, pair<int,int> > >* global_anynet_router_links;
++map<int, int>* global_anynet_local_node_count;
++int global_anynet_runtime_seed = 0;
++int global_anynet_runtime_candidates = 4;
++int global_anynet_runtime_threshold = 0;
++
++static void anynet_vc_range( const Flit *f, int *vcBegin, int *vcEnd );
++static bool anynet_is_source_router( const Router *r, const Flit *f, int in_channel );
++static int anynet_local_count( int router );
++static int anynet_router_for_node( int node );
++static int anynet_escape_port( int router, int destination );
++static int anynet_distance( int router, int destination );
++static int anynet_hash( int a, int b, int c, int seed );
++static int anynet_intermediate( int src, int dest, int salt );
++static int anynet_best_min_port( const Router *r, int target );
++static int anynet_best_intermediate( const Router *r, const Flit *f, int samples );
++static void anynet_add_min_adaptive_outputs( const Router *r, const Flit *f,
++					     int target, int adaptive_vc,
++					     OutputSet *outputs );
+ 
+ AnyNet::AnyNet( const Configuration &config, const string & name )
+   :  Network( config, name ){
+@@ -81,6 +101,9 @@
+ void AnyNet::_ComputeSize( const Configuration &config ){
+   file_name = config.GetStr("network_file");
+   route_table_file = config.GetStr("route_table_file");
++  global_anynet_runtime_seed = config.GetInt("anynet_runtime_seed");
++  global_anynet_runtime_candidates = config.GetInt("anynet_runtime_candidates");
++  global_anynet_runtime_threshold = config.GetInt("anynet_runtime_threshold");
+   if(file_name==""){
+     cout<<"No network file name provided"<<endl;
+     exit(-1);
+@@ -211,6 +234,18 @@
+ 
+ void AnyNet::RegisterRoutingFunctions() {
+   gRoutingFunctionMap["min_anynet"] = &min_anynet;
++  gRoutingFunctionMap["ubmesh_apr_anynet"] = &anynet_ugal_l;
++  gRoutingFunctionMap["dragonfly_ugal_l_anynet"] = &anynet_ugal_l;
++  gRoutingFunctionMap["dragonfly_valg_anynet"] = &anynet_valiant;
++  gRoutingFunctionMap["dragonfly_valn_anynet"] = &anynet_valiant;
++  gRoutingFunctionMap["dragonfly_par_anynet"] = &anynet_par;
++  gRoutingFunctionMap["hypercube_min_adaptive_anynet"] = &anynet_min_adaptive;
++  gRoutingFunctionMap["hypercube_valiant_anynet"] = &anynet_valiant;
++  gRoutingFunctionMap["hypercube_ugal_l_anynet"] = &anynet_ugal_l;
++  gRoutingFunctionMap["slimnoc_ugal_l_anynet"] = &anynet_ugal_l;
++  gRoutingFunctionMap["slimnoc_ugal_g_anynet"] = &anynet_ugal_l;
++  gRoutingFunctionMap["slimnoc_valiant_anynet"] = &anynet_valiant;
++  gRoutingFunctionMap["lln_adaptive_layer_anynet"] = &anynet_min_adaptive;
+ }
+ 
+ void min_anynet( const Router *r, const Flit *f, int in_channel, 
+@@ -255,9 +290,322 @@
+   outputs->AddRange( out_port , vcBegin, vcEnd );
+ }
+ 
++void anynet_min_adaptive( const Router *r, const Flit *f, int in_channel,
++			  OutputSet *outputs, bool inject )
++{
++  int vcBegin = 0, vcEnd = gNumVCs - 1;
++  anynet_vc_range(f, &vcBegin, &vcEnd);
++  outputs->Clear();
++
++  if(inject) {
++    outputs->AddRange(-1, vcBegin, vcEnd);
++    return;
++  }
++
++  int rID = r->GetID();
++  if(anynet_router_for_node(f->dest) == rID) {
++    outputs->AddRange(anynet_escape_port(rID, f->dest), vcBegin, vcEnd);
++    return;
++  }
++
++  int adaptive_vc = (vcBegin < vcEnd) ? vcBegin + 1 : vcBegin;
++  anynet_add_min_adaptive_outputs(r, f, f->dest, adaptive_vc, outputs);
++}
++
++void anynet_valiant( const Router *r, const Flit *f, int in_channel,
++		     OutputSet *outputs, bool inject )
++{
++  int vcBegin = 0, vcEnd = gNumVCs - 1;
++  anynet_vc_range(f, &vcBegin, &vcEnd);
++  outputs->Clear();
++
++  if(inject) {
++    outputs->AddRange(-1, vcBegin, vcEnd);
++    return;
++  }
++
++  int rID = r->GetID();
++  if(anynet_is_source_router(r, f, in_channel)) {
++    f->ph = 0;
++    f->intm = anynet_intermediate(f->src, f->dest, global_anynet_runtime_seed);
++  }
++
++  if(f->ph == 0 && anynet_router_for_node(f->intm) == rID) {
++    f->ph = 1;
++  }
++
++  int target = (f->ph == 0) ? f->intm : f->dest;
++  if(anynet_router_for_node(target) == rID) {
++    if(target == f->dest) {
++      outputs->AddRange(anynet_escape_port(rID, target), vcBegin, vcEnd);
++      return;
++    }
++    f->ph = 1;
++    target = f->dest;
++  }
++
++  int phase_vc = vcBegin + min(f->ph, vcEnd - vcBegin);
++  outputs->AddRange(anynet_escape_port(rID, target), phase_vc, phase_vc);
++}
++
++void anynet_ugal_l( const Router *r, const Flit *f, int in_channel,
++		    OutputSet *outputs, bool inject )
++{
++  int vcBegin = 0, vcEnd = gNumVCs - 1;
++  anynet_vc_range(f, &vcBegin, &vcEnd);
++  outputs->Clear();
++
++  if(inject) {
++    outputs->AddRange(-1, vcBegin, vcEnd);
++    return;
++  }
++
++  int rID = r->GetID();
++  if(anynet_router_for_node(f->dest) == rID && f->ph != 0) {
++    outputs->AddRange(anynet_escape_port(rID, f->dest), vcBegin, vcEnd);
++    return;
++  }
++
++  if(anynet_is_source_router(r, f, in_channel)) {
++    int intermediate = anynet_best_intermediate(
++      r, f, max(1, global_anynet_runtime_candidates));
++    int min_port = anynet_best_min_port(r, f->dest);
++    int nonmin_port = anynet_best_min_port(r, intermediate);
++    int min_score = anynet_distance(rID, f->dest) * 1024
++      + max(r->GetUsedCredit(min_port), 0);
++    int nonmin_score = anynet_distance(rID, intermediate) * 1024
++      + max(r->GetUsedCredit(nonmin_port), 0);
++    f->intm = intermediate;
++    f->ph = (min_score <= nonmin_score + global_anynet_runtime_threshold) ? 1 : 0;
++  }
++
++  if(f->ph == 0 && anynet_router_for_node(f->intm) == rID) {
++    f->ph = 2;
++  }
++
++  int target = (f->ph == 0) ? f->intm : f->dest;
++  if(anynet_router_for_node(target) == rID) {
++    if(target == f->dest) {
++      outputs->AddRange(anynet_escape_port(rID, target), vcBegin, vcEnd);
++      return;
++    }
++    f->ph = 2;
++    target = f->dest;
++  }
++
++  int adaptive_vc = vcBegin + min(max(f->ph, 1), vcEnd - vcBegin);
++  anynet_add_min_adaptive_outputs(r, f, target, adaptive_vc, outputs);
++}
++
++void anynet_par( const Router *r, const Flit *f, int in_channel,
++		 OutputSet *outputs, bool inject )
++{
++  int vcBegin = 0, vcEnd = gNumVCs - 1;
++  anynet_vc_range(f, &vcBegin, &vcEnd);
++  outputs->Clear();
++
++  if(inject) {
++    outputs->AddRange(-1, vcBegin, vcEnd);
++    return;
++  }
++
++  int rID = r->GetID();
++  if(anynet_is_source_router(r, f, in_channel)) {
++    f->intm = anynet_best_intermediate(
++      r, f, max(1, global_anynet_runtime_candidates));
++    f->ph = 0;
++  }
++
++  if(f->ph == 0) {
++    int min_port = anynet_best_min_port(r, f->dest);
++    int nonmin_port = anynet_best_min_port(r, f->intm);
++    int min_score = anynet_distance(rID, f->dest) * 1024
++      + max(r->GetUsedCredit(min_port), 0);
++    int nonmin_score = anynet_distance(rID, f->intm) * 1024
++      + max(r->GetUsedCredit(nonmin_port), 0);
++    if(min_score <= nonmin_score + global_anynet_runtime_threshold) {
++      f->ph = 1;
++    }
++  }
++
++  if(f->ph == 0 && anynet_router_for_node(f->intm) == rID) {
++    f->ph = 3;
++  }
++
++  int target = (f->ph == 0) ? f->intm : f->dest;
++  if(anynet_router_for_node(target) == rID) {
++    if(target == f->dest) {
++      outputs->AddRange(anynet_escape_port(rID, target), vcBegin, vcEnd);
++      return;
++    }
++    f->ph = 3;
++    target = f->dest;
++  }
++
++  int adaptive_vc = vcBegin + min(max(f->ph, 1), vcEnd - vcBegin);
++  anynet_add_min_adaptive_outputs(r, f, target, adaptive_vc, outputs);
++}
++
++static void anynet_vc_range( const Flit *f, int *vcBegin, int *vcEnd )
++{
++  *vcBegin = 0;
++  *vcEnd = gNumVCs - 1;
++  if ( f->type == Flit::READ_REQUEST ) {
++    *vcBegin = gReadReqBeginVC;
++    *vcEnd = gReadReqEndVC;
++  } else if ( f->type == Flit::WRITE_REQUEST ) {
++    *vcBegin = gWriteReqBeginVC;
++    *vcEnd = gWriteReqEndVC;
++  } else if ( f->type ==  Flit::READ_REPLY ) {
++    *vcBegin = gReadReplyBeginVC;
++    *vcEnd = gReadReplyEndVC;
++  } else if ( f->type ==  Flit::WRITE_REPLY ) {
++    *vcBegin = gWriteReplyBeginVC;
++    *vcEnd = gWriteReplyEndVC;
++  }
++}
++
++static bool anynet_is_source_router( const Router *r, const Flit *f, int in_channel )
++{
++  int rID = r->GetID();
++  return anynet_router_for_node(f->src) == rID && in_channel < anynet_local_count(rID);
++}
++
++static int anynet_local_count( int router )
++{
++  if(global_anynet_local_node_count &&
++     global_anynet_local_node_count->count(router) != 0) {
++    return (*global_anynet_local_node_count)[router];
++  }
++  return 0;
++}
++
++static int anynet_router_for_node( int node )
++{
++  assert(global_node_list && global_node_list->count(node) != 0);
++  return (*global_node_list)[node];
++}
++
++static int anynet_escape_port( int router, int destination )
++{
++  assert(global_routing_table && global_routing_table[router].count(destination) != 0);
++  return global_routing_table[router][destination].first;
++}
++
++static int anynet_distance( int router, int destination )
++{
++  if(global_anynet_distance_table &&
++     global_anynet_distance_table[router].count(destination) != 0) {
++    return global_anynet_distance_table[router][destination];
++  }
++  return numeric_limits<int>::max() / 4;
++}
++
++static int anynet_hash( int a, int b, int c, int seed )
++{
++  unsigned int value = (unsigned int)(seed + 0x9e3779b9U);
++  value ^= (unsigned int)(a + 0x7f4a7c15U + (value << 6) + (value >> 2));
++  value ^= (unsigned int)(b + 0x94d049bbU + (value << 6) + (value >> 2));
++  value ^= (unsigned int)(c + 0x2545f491U + (value << 6) + (value >> 2));
++  return (int)(value & 0x7fffffffU);
++}
++
++static int anynet_intermediate( int src, int dest, int salt )
++{
++  assert(global_node_list);
++  int node_count = global_node_list->size();
++  if(node_count <= 2) {
++    return dest;
++  }
++  int candidate = anynet_hash(src, dest, salt, global_anynet_runtime_seed) % node_count;
++  for(int attempt = 0; attempt < node_count; attempt++) {
++    int node = (candidate + attempt) % node_count;
++    if(node != src && node != dest) {
++      return node;
++    }
++  }
++  return dest;
++}
++
++static int anynet_best_min_port( const Router *r, int target )
++{
++  int rID = r->GetID();
++  int escape = anynet_escape_port(rID, target);
++  int current_dist = anynet_distance(rID, target);
++  int best_port = escape;
++  int best_score = current_dist * 1024 + max(r->GetUsedCredit(escape), 0);
++
++  if(!global_anynet_router_links ||
++     global_anynet_router_links->count(rID) == 0) {
++    return best_port;
++  }
++
++  for(map<int, pair<int, int> >::iterator iter = (*global_anynet_router_links)[rID].begin();
++      iter != (*global_anynet_router_links)[rID].end();
++      iter++) {
++    int neighbor = iter->first;
++    int port = iter->second.first;
++    int dist = anynet_distance(neighbor, target);
++    if(dist >= current_dist) {
++      continue;
++    }
++    int score = dist * 1024 + max(r->GetUsedCredit(port), 0);
++    if(score < best_score) {
++      best_score = score;
++      best_port = port;
++    }
++  }
++  return best_port;
++}
++
++static int anynet_best_intermediate( const Router *r, const Flit *f, int samples )
++{
++  int best = anynet_intermediate(f->src, f->dest, 0);
++  int best_score = numeric_limits<int>::max() / 4;
++  for(int sample = 0; sample < samples; sample++) {
++    int candidate = anynet_intermediate(f->src, f->dest, sample);
++    int candidate_router = anynet_router_for_node(candidate);
++    int first_dist = anynet_distance(r->GetID(), candidate);
++    int second_dist = anynet_distance(candidate_router, f->dest);
++    int port = anynet_best_min_port(r, candidate);
++    int score = (first_dist + second_dist) * 1024 + max(r->GetUsedCredit(port), 0);
++    if(score < best_score) {
++      best_score = score;
++      best = candidate;
++    }
++  }
++  return best;
++}
++
++static void anynet_add_min_adaptive_outputs( const Router *r, const Flit *f,
++					     int target, int adaptive_vc,
++					     OutputSet *outputs )
++{
++  int vcBegin = 0, vcEnd = gNumVCs - 1;
++  anynet_vc_range(f, &vcBegin, &vcEnd);
++  int rID = r->GetID();
++  int escape_port = anynet_escape_port(rID, target);
++  outputs->AddRange(escape_port, vcBegin, vcBegin, 0);
++
++  if(f->vc == vcBegin) {
++    return;
++  }
++
++  int out_port = anynet_best_min_port(r, target);
++  int vc = min(max(adaptive_vc, vcBegin), vcEnd);
++  outputs->AddRange(out_port, vc, vc, 1);
++}
++
+ void AnyNet::buildRoutingTable(){
+   cout<<"========================== Routing table  =====================\n";  
+   routing_table.resize(_size);
++  routing_distance_table.resize(_size);
++  global_anynet_local_node_count = new map<int, int>();
++  for(map<int, map<int, pair<int, int> > >::iterator iter = router_list[0].begin();
++      iter != router_list[0].end();
++      iter++){
++    (*global_anynet_local_node_count)[iter->first] = iter->second.size();
++  }
+   if(route_table_file != ""){
+     readRoutingTableFile();
+   } else {
+@@ -267,6 +615,8 @@
+   }
+   global_routing_table = &routing_table[0];
+   global_node_list = &node_list;
++  global_anynet_distance_table = &routing_distance_table[0];
++  global_anynet_router_links = &router_list[1];
+ }
+ 
+ void AnyNet::readRoutingTableFile(){
+@@ -355,6 +705,11 @@
+   
+   //post process from the prev list
+   for(int i = 0; i<_size; i++){
++    for(map<int, pair<int, int> >::iterator iter = router_list[0][i].begin();
++	iter!=router_list[0][i].end();
++	iter++){
++      routing_distance_table[r_start][iter->first] = dist[i];
++    }
+     if(prev[i] ==-1){ //self
+       assert(i == r_start);
+       for(map<int, pair<int, int> >::iterator iter = router_list[0][i].begin();

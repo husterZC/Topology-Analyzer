@@ -1,0 +1,23 @@
+name: slimnoc_q5_p4_ugal_g_runtime
+
+topology:
+  type: slimnoc
+  params:
+    q: 5
+    concentration: 4
+    layout: subgroup
+
+links:
+  default:
+    latency_cycles: 1
+    bandwidth: 64GB/s
+  classes:
+    cross:
+      latency_cycles: 2
+      bandwidth: 128GB/s
+
+routing:
+  type: slimnoc_ugal_g_runtime
+  seed: 0
+  candidates: 4
+  adaptive_threshold: 0

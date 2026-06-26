@@ -4,6 +4,19 @@ from typing import Any
 
 from topoanalyzer.model.links import LinkParameters
 from topoanalyzer.model.system import System
+from topoanalyzer.routing.anynet_runtime import (
+    DragonflyPARRuntimeRoutingGenerator,
+    DragonflyUGALLRuntimeRoutingGenerator,
+    DragonflyValGRuntimeRoutingGenerator,
+    DragonflyValNRuntimeRoutingGenerator,
+    HypercubeMinAdaptiveRuntimeRoutingGenerator,
+    HypercubeUGALLRuntimeRoutingGenerator,
+    HypercubeValiantRuntimeRoutingGenerator,
+    LLNAdaptiveLayerRuntimeRoutingGenerator,
+    SlimNoCUGALGRuntimeRoutingGenerator,
+    SlimNoCUGALLRuntimeRoutingGenerator,
+    SlimNoCValiantRuntimeRoutingGenerator,
+)
 from topoanalyzer.routing.dragonfly_min import DragonflyMinimalRoutingGenerator
 from topoanalyzer.routing.dragonfly_valiant_hash import (
     DragonflyValiantHashRoutingGenerator,
@@ -134,6 +147,24 @@ def build_system_from_dict(data: dict[str, Any]) -> System:
         routing_generator = HypercubeValiantHashRoutingGenerator(
             seed=int(routing_spec.get("seed", 0)),
         )
+    elif routing_type == "hypercube_min_adaptive_runtime":
+        routing_generator = HypercubeMinAdaptiveRuntimeRoutingGenerator(
+            seed=int(routing_spec.get("seed", 0)),
+            candidates=int(routing_spec.get("candidates", 4)),
+            adaptive_threshold=int(routing_spec.get("adaptive_threshold", 0)),
+        )
+    elif routing_type == "hypercube_valiant_runtime":
+        routing_generator = HypercubeValiantRuntimeRoutingGenerator(
+            seed=int(routing_spec.get("seed", 0)),
+            candidates=int(routing_spec.get("candidates", 4)),
+            adaptive_threshold=int(routing_spec.get("adaptive_threshold", 0)),
+        )
+    elif routing_type == "hypercube_ugal_l_runtime":
+        routing_generator = HypercubeUGALLRuntimeRoutingGenerator(
+            seed=int(routing_spec.get("seed", 0)),
+            candidates=int(routing_spec.get("candidates", 4)),
+            adaptive_threshold=int(routing_spec.get("adaptive_threshold", 0)),
+        )
     elif routing_type == "dragonfly_min":
         routing_generator = DragonflyMinimalRoutingGenerator()
     elif routing_type == "dragonfly_valiant_hash":
@@ -141,11 +172,53 @@ def build_system_from_dict(data: dict[str, Any]) -> System:
             seed=int(routing_spec.get("seed", 0)),
             nonminimal_same_group=bool(routing_spec.get("nonminimal_same_group", False)),
         )
+    elif routing_type == "dragonfly_ugal_l_runtime":
+        routing_generator = DragonflyUGALLRuntimeRoutingGenerator(
+            seed=int(routing_spec.get("seed", 0)),
+            candidates=int(routing_spec.get("candidates", 4)),
+            adaptive_threshold=int(routing_spec.get("adaptive_threshold", 0)),
+        )
+    elif routing_type == "dragonfly_valg_runtime":
+        routing_generator = DragonflyValGRuntimeRoutingGenerator(
+            seed=int(routing_spec.get("seed", 0)),
+            candidates=int(routing_spec.get("candidates", 4)),
+            adaptive_threshold=int(routing_spec.get("adaptive_threshold", 0)),
+        )
+    elif routing_type == "dragonfly_valn_runtime":
+        routing_generator = DragonflyValNRuntimeRoutingGenerator(
+            seed=int(routing_spec.get("seed", 0)),
+            candidates=int(routing_spec.get("candidates", 4)),
+            adaptive_threshold=int(routing_spec.get("adaptive_threshold", 0)),
+        )
+    elif routing_type == "dragonfly_par_runtime":
+        routing_generator = DragonflyPARRuntimeRoutingGenerator(
+            seed=int(routing_spec.get("seed", 0)),
+            candidates=int(routing_spec.get("candidates", 4)),
+            adaptive_threshold=int(routing_spec.get("adaptive_threshold", 0)),
+        )
     elif routing_type == "slimnoc_min":
         routing_generator = SlimNoCMinimalRoutingGenerator()
     elif routing_type == "slimnoc_valiant_hash":
         routing_generator = SlimNoCValiantHashRoutingGenerator(
             seed=int(routing_spec.get("seed", 0)),
+        )
+    elif routing_type == "slimnoc_ugal_l_runtime":
+        routing_generator = SlimNoCUGALLRuntimeRoutingGenerator(
+            seed=int(routing_spec.get("seed", 0)),
+            candidates=int(routing_spec.get("candidates", 4)),
+            adaptive_threshold=int(routing_spec.get("adaptive_threshold", 0)),
+        )
+    elif routing_type == "slimnoc_ugal_g_runtime":
+        routing_generator = SlimNoCUGALGRuntimeRoutingGenerator(
+            seed=int(routing_spec.get("seed", 0)),
+            candidates=int(routing_spec.get("candidates", 4)),
+            adaptive_threshold=int(routing_spec.get("adaptive_threshold", 0)),
+        )
+    elif routing_type == "slimnoc_valiant_runtime":
+        routing_generator = SlimNoCValiantRuntimeRoutingGenerator(
+            seed=int(routing_spec.get("seed", 0)),
+            candidates=int(routing_spec.get("candidates", 4)),
+            adaptive_threshold=int(routing_spec.get("adaptive_threshold", 0)),
         )
     elif routing_type == "ubmesh_shortest":
         routing_generator = UBMeshShortestRoutingGenerator()
@@ -169,6 +242,12 @@ def build_system_from_dict(data: dict[str, Any]) -> System:
         routing_generator = LLNTableRoutingGenerator()
     elif routing_type == "lln_dor_fallback":
         routing_generator = LLNDORFallbackRoutingGenerator()
+    elif routing_type == "lln_adaptive_layer_runtime":
+        routing_generator = LLNAdaptiveLayerRuntimeRoutingGenerator(
+            seed=int(routing_spec.get("seed", 0)),
+            candidates=int(routing_spec.get("candidates", 4)),
+            adaptive_threshold=int(routing_spec.get("adaptive_threshold", 0)),
+        )
     elif routing_type == "fattree_lca":
         routing_generator = FatTreeLCARoutingGenerator()
     elif routing_type == "fattree_nca_hash":

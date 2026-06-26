@@ -19,7 +19,8 @@ route_table_file = <generated anynet.routes>;
 Stock BookSim2 supports `anynet` topology files, but its built-in `min_anynet`
 routing function computes shortest paths internally and does not read an
 external route table. Apply `table_anynet.patch` to a BookSim2 checkout to make
-`AnyNet` load the generated route table.
+`AnyNet` load the generated route table. Apply `adaptive_anynet.patch` after
+that to add runtime adaptive anynet routing functions.
 
 The easiest repo-local setup is:
 
@@ -35,6 +36,7 @@ From the root of a BookSim2 checkout:
 
 ```bash
 patch -p1 < /path/to/Topology-Analyzer/booksim_overlays/booksim2/table_anynet.patch
+patch -p1 < /path/to/Topology-Analyzer/booksim_overlays/booksim2/adaptive_anynet.patch
 make -C src
 ```
 
@@ -65,6 +67,11 @@ Current scope:
 - per-directed-router-link latency through `anynet.net`,
 - deterministic table-driven routing through `anynet.routes`,
 - static VC selection per route-table entry.
+- runtime adaptive anynet routing functions for `ubmesh_apr`,
+  `dragonfly_ugal_l`, `dragonfly_valg`, `dragonfly_valn`, `dragonfly_par`,
+  `hypercube_min_adaptive`, `hypercube_valiant`, `hypercube_ugal_l`,
+  `slimnoc_ugal_l`, `slimnoc_ugal_g`, `slimnoc_valiant`, and
+  `lln_adaptive_layer`.
 
 Per-link bandwidth remains metadata in `anynet_mapping.json`; this BookSim2
 channel model does not expose per-edge bandwidth.

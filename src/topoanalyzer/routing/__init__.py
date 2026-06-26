@@ -1,3 +1,16 @@
+from topoanalyzer.routing.anynet_runtime import (
+    DragonflyPARRuntimeRoutingGenerator,
+    DragonflyUGALLRuntimeRoutingGenerator,
+    DragonflyValGRuntimeRoutingGenerator,
+    DragonflyValNRuntimeRoutingGenerator,
+    HypercubeMinAdaptiveRuntimeRoutingGenerator,
+    HypercubeUGALLRuntimeRoutingGenerator,
+    HypercubeValiantRuntimeRoutingGenerator,
+    LLNAdaptiveLayerRuntimeRoutingGenerator,
+    SlimNoCUGALGRuntimeRoutingGenerator,
+    SlimNoCUGALLRuntimeRoutingGenerator,
+    SlimNoCValiantRuntimeRoutingGenerator,
+)
 from topoanalyzer.routing.dragonfly_min import DragonflyMinimalRoutingGenerator
 from topoanalyzer.routing.dragonfly_valiant_hash import (
     DragonflyValiantHashRoutingGenerator,
@@ -39,6 +52,10 @@ from topoanalyzer.routing.ubmesh_tfc import UBMeshTFCRoutingGenerator
 
 __all__ = [
     "DragonflyMinimalRoutingGenerator",
+    "DragonflyPARRuntimeRoutingGenerator",
+    "DragonflyUGALLRuntimeRoutingGenerator",
+    "DragonflyValGRuntimeRoutingGenerator",
+    "DragonflyValNRuntimeRoutingGenerator",
     "DragonflyValiantHashRoutingGenerator",
     "FatTreeANCARoutingGenerator",
     "FatTreeDmodKRoutingGenerator",
@@ -49,7 +66,11 @@ __all__ = [
     "GraphUpDownRoutingGenerator",
     "HypercubeECubeRoutingGenerator",
     "HypercubeLashRoutingGenerator",
+    "HypercubeMinAdaptiveRuntimeRoutingGenerator",
+    "HypercubeUGALLRuntimeRoutingGenerator",
+    "HypercubeValiantRuntimeRoutingGenerator",
     "HypercubeValiantHashRoutingGenerator",
+    "LLNAdaptiveLayerRuntimeRoutingGenerator",
     "LLNDORFallbackRoutingGenerator",
     "LLNTableRoutingGenerator",
     "Mesh2DXYRoutingGenerator",
@@ -58,6 +79,9 @@ __all__ = [
     "Ruche3DValiantHashRoutingGenerator",
     "Ruche3DXYZRoutingGenerator",
     "SlimNoCMinimalRoutingGenerator",
+    "SlimNoCUGALGRuntimeRoutingGenerator",
+    "SlimNoCUGALLRuntimeRoutingGenerator",
+    "SlimNoCValiantRuntimeRoutingGenerator",
     "SlimNoCValiantHashRoutingGenerator",
     "Torus2DXYRoutingGenerator",
     "Torus3DXYZRoutingGenerator",

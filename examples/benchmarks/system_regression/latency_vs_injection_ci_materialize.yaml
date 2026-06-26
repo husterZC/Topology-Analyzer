@@ -8,7 +8,7 @@ benchmark:
   sample_cycles: 500
   max_samples: 1
   repetitions: 1
-  num_vcs: 4
+  num_vcs: 5
   vc_buffer_size: 4
   router_latency: 1
   timeout_seconds: 120
@@ -16,6 +16,10 @@ benchmark:
 
 systems:
   - ../../systems/dragonfly/min/dragonfly_p2_a4_h2_min.yaml
+  - ../../systems/dragonfly/par_runtime/dragonfly_p2_a4_h2_par_runtime.yaml
+  - ../../systems/dragonfly/ugal_l_runtime/dragonfly_p2_a4_h2_ugal_l_runtime.yaml
+  - ../../systems/dragonfly/valg_runtime/dragonfly_p2_a4_h2_valg_runtime.yaml
+  - ../../systems/dragonfly/valn_runtime/dragonfly_p2_a4_h2_valn_runtime.yaml
   - ../../systems/dragonfly/valiant_hash/dragonfly_p2_a4_h2_valiant_hash.yaml
   - ../../systems/fattree/anca/fattree_r8_l4_anca.yaml
   - ../../systems/fattree/dmodc/fattree_r8_l4_dmodc.yaml
@@ -24,7 +28,11 @@ systems:
   - ../../systems/fattree/nca_hash/fattree_r8_l4_nca_hash.yaml
   - ../../systems/hypercube/ecube/hypercube_d4_ecube.yaml
   - ../../systems/hypercube/lash/hypercube_d4_lash.yaml
+  - ../../systems/hypercube/min_adaptive_runtime/hypercube_d4_min_adaptive_runtime.yaml
+  - ../../systems/hypercube/ugal_l_runtime/hypercube_d4_ugal_l_runtime.yaml
+  - ../../systems/hypercube/valiant_runtime/hypercube_d4_valiant_runtime.yaml
   - ../../systems/hypercube/valiant_hash/hypercube_d4_valiant_hash.yaml
+  - ../../systems/lln/adaptive_layer_runtime/lln_4x4x5_adaptive_layer_runtime.yaml
   - ../../systems/lln/dor_fallback/lln_4x4x4_dor_fallback.yaml
   - ../../systems/lln/table/lln_4x4x5_table.yaml
   - ../../systems/mesh2d/graph_lash/mesh2d_2x2_graph_lash.yaml
@@ -45,6 +53,9 @@ systems:
   - ../../systems/slimnoc/min/slimnoc_q5_p4_min.yaml
   - ../../systems/slimnoc/min/slimnoc_q8_p8_min.yaml
   - ../../systems/slimnoc/min/slimnoc_q9_p8_min.yaml
+  - ../../systems/slimnoc/ugal_g_runtime/slimnoc_q5_p4_ugal_g_runtime.yaml
+  - ../../systems/slimnoc/ugal_l_runtime/slimnoc_q5_p4_ugal_l_runtime.yaml
+  - ../../systems/slimnoc/valiant_runtime/slimnoc_q5_p4_valiant_runtime.yaml
   - ../../systems/slimnoc/valiant_hash/slimnoc_q5_p4_valiant_hash.yaml
   - ../../systems/torus2d/xy/torus2d_4x4_xy.yaml
   - ../../systems/torus3d/xyz/torus3d_3x3x3_xyz.yaml

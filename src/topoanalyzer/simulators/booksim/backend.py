@@ -41,7 +41,7 @@ class BookSimBackend:
                 network_file=artifacts.network_file.resolve(),
                 route_table_file=artifacts.route_table_file.resolve(),
             )
-        elif backend == "ubmesh_apr_runtime":
+        elif backend == "anynet_runtime":
             artifacts = self.anynet_exporter.materialize_network(system, run_dir)
             config = self.config_generator.generate(
                 system,

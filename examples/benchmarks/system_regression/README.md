@@ -21,9 +21,9 @@ It uses `booksim.backend: auto`, so runtime-routed examples such as
 `fattree_anca` and `ubmesh_apr_runtime` select their custom BookSim backend,
 while static-routing examples use the table-driven `anynet` backend.
 
-The benchmark uses `num_vcs: 4` because the current example routing tables use
-VC IDs up to 3. Systems that need fewer VCs still run correctly with the larger
-VC budget.
+The benchmark uses `num_vcs: 5` because the adaptive runtime examples include
+`dragonfly_par_runtime`, which reserves five VC phases. Systems that need fewer
+VCs still run correctly with the larger VC budget.
 
 CI uses `latency_vs_injection_ci_materialize.yaml` with `--dry-run` for the
 same CI-sized system list. It uses one injection point to avoid repeating
@@ -45,9 +45,31 @@ broader `latency_vs_injection_ci.yaml` file is still the all-system CI-sized
 sweep, including runtime APR materialization, but it is more appropriate for
 local regression runs or dry materialization checks.
 
-`ubmesh_apr_runtime` is not included in the real BookSim CI smoke because the
-repo-local BookSim overlay currently provides the table-driven `anynet` backend,
-but not a compiled `ubmesh_apr` runtime routing function.
+Runtime anynet algorithms are kept in a separate smoke file so the CI smoke can
+stay representative and short. Use the dedicated adaptive smoke below to
+exercise those runtime routing functions.
+
+## Adaptive Runtime BookSim Smoke
+
+Run the real-simulator adaptive runtime smoke:
+
+```sh
+topoanalyzer benchmark examples/benchmarks/system_regression/latency_vs_injection_adaptive_runtime_booksim_smoke.yaml --no-progress
+```
+
+This file runs one low-rate point over the runtime anynet algorithms:
+
+- Dragonfly: `dragonfly_ugal_l_runtime`, `dragonfly_valg_runtime`,
+  `dragonfly_valn_runtime`, `dragonfly_par_runtime`
+- Hypercube: `hypercube_min_adaptive_runtime`, `hypercube_valiant_runtime`,
+  `hypercube_ugal_l_runtime`
+- SlimNoC: `slimnoc_ugal_l_runtime`, `slimnoc_ugal_g_runtime`,
+  `slimnoc_valiant_runtime`
+- LLN: `lln_adaptive_layer_runtime`
+- UBMesh: `ubmesh_apr_runtime`
+
+It uses `num_vcs: 5` because `dragonfly_par_runtime` is the highest-VC runtime
+case in the current set.
 
 ## Large Manual Regression
 
