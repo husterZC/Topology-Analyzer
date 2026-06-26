@@ -1,6 +1,7 @@
 from topoanalyzer.topologies.dragonfly import DragonflyParams, DragonflyTopologyBuilder
 from topoanalyzer.topologies.fattree import FatTreeParams, FatTreeTopologyBuilder
 from topoanalyzer.topologies.hypercube import HypercubeParams, HypercubeTopologyBuilder
+from topoanalyzer.topologies.lln import LLNParams, LLNTopologyBuilder
 from topoanalyzer.topologies.mesh2d import Mesh2DParams, Mesh2DTopologyBuilder
 from topoanalyzer.topologies.mesh3d import Mesh3DParams, Mesh3DTopologyBuilder
 from topoanalyzer.topologies.ruche3d import Ruche3DParams, Ruche3DTopologyBuilder
@@ -16,6 +17,8 @@ __all__ = [
     "FatTreeTopologyBuilder",
     "HypercubeParams",
     "HypercubeTopologyBuilder",
+    "LLNParams",
+    "LLNTopologyBuilder",
     "Mesh2DParams",
     "Mesh2DTopologyBuilder",
     "Mesh3DParams",

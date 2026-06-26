@@ -43,6 +43,8 @@ freedom through the VC-aware channel dependency graph.
 | `ubmesh` | `ubmesh_apr_runtime` | BookSim runtime APR marker; not exported as static `anynet.routes`. |
 | `ubmesh` | `ubmesh_tfc` | Static two-VL TFC approximation for UBMesh APR paths. |
 | `ubmesh` and most connected graphs | `graph_updown`, `graph_lash` | Generic graph baselines when UBMesh-specific routes are not desired. |
+| `lln` | `lln_table` | Paper-style deterministic long-link table routing with 3-VC phase split. |
+| `lln` | `lln_dor_fallback` | Same LLN table routing, explicitly allowing core-mesh DOR fallback for partial coverage. |
 | `fattree` | `fattree_lca` | Simple deterministic nearest-common-ancestor baseline. |
 | `fattree` | `fattree_nca_hash` | Balanced static ECMP-style nearest-common-ancestor baseline. |
 | `fattree` | `fattree_dmodk` | Deterministic D-mod-k-style modulo baseline. |
@@ -449,6 +451,44 @@ Behavior:
 The UBMesh paper states that TFC uses two virtual lanes, but does not publish
 the full TFC algorithmic detail. This generator is a conservative static
 approximation for table-driven experiments.
+
+</details>
+
+<details>
+<summary><code>lln_table</code> and <code>lln_dor_fallback</code>: deterministic LLN long-link table routing</summary>
+
+```yaml
+routing:
+  type: lln_table
+```
+
+```yaml
+routing:
+  type: lln_dor_fallback
+```
+
+Behavior:
+
+1. Look up whether a projected long link exists between source `(x,y)` and
+   destination `(u,v)`.
+2. If a long link exists in layer `l`, route
+   `(x,y,zs) -> (x,y,l) -> (u,v,l) -> (u,v,zd)`.
+3. If no long link exists, route through the preserved core mesh in layer `0`
+   using deterministic XY order.
+4. Assign VC `0` to pre-horizontal vertical hops, VC `1` to horizontal mesh or
+   long-link hops, and VC `2` to post-horizontal vertical hops.
+
+`lln_table` is the paper-style baseline for full-coverage LLN systems.
+`lln_dor_fallback` uses the same algorithm but makes partial-coverage fallback
+explicit in the route name. Both are static table routes and work with
+`booksim.backend: anynet_table` or `booksim.backend: auto`.
+
+Because the route can use VC `2`, benchmarks should set:
+
+```yaml
+benchmark:
+  num_vcs: 3
+```
 
 </details>
 

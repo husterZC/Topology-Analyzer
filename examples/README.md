@@ -7,6 +7,8 @@ examples/
   benchmarks/
     mesh2d/          benchmark specs that reference one or more systems
     comparisons/     cross-topology benchmark specs
+    system_regression/
+                     CI-sized and manual smoke benchmarks across example systems
   systems/
     dragonfly/
       min/           Dragonfly systems with minimal VC-split routing
@@ -28,6 +30,9 @@ examples/
       link_variants/ heterogeneous link parameter examples
     mesh3d/
       xyz/           3D mesh XYZ baseline systems
+    lln/
+      table/         LLN systems with paper-style deterministic table routing
+      dor_fallback/  LLN partial-coverage systems with core-mesh DOR fallback
     ruche3d/
       lash/          3D ruche systems with graph shortest-path VC routing
       valiant_hash/  3D ruche systems with static Valiant-style hashed routing
@@ -59,6 +64,8 @@ topoanalyzer validate examples/systems/fattree/dmodk/fattree_r8_l4_dmodk.yaml
 topoanalyzer validate examples/systems/fattree/dmodc/fattree_r8_l4_dmodc.yaml
 topoanalyzer validate examples/systems/fattree/anca/fattree_r8_l4_anca.yaml
 topoanalyzer validate examples/systems/mesh3d/xyz/mesh3d_4x4x2_xyz.yaml
+topoanalyzer validate examples/systems/lln/table/lln_4x4x5_table.yaml
+topoanalyzer validate examples/systems/lln/dor_fallback/lln_4x4x4_dor_fallback.yaml
 topoanalyzer validate examples/systems/torus2d/xy/torus2d_4x4_xy.yaml
 topoanalyzer validate examples/systems/torus3d/xyz/torus3d_3x3x3_xyz.yaml
 topoanalyzer validate examples/systems/ruche3d/xyz/ruche3d_4x4x4_s2_xyz.yaml
@@ -82,4 +89,5 @@ topoanalyzer validate examples/systems/mesh2d/graph_lash/mesh2d_4x4_graph_lash.y
 topoanalyzer validate examples/systems/mesh2d/graph_updown/mesh2d_4x4_graph_updown.yaml
 topoanalyzer benchmark examples/benchmarks/mesh2d/latency_vs_injection_mesh2d_scales.yaml --dry-run
 topoanalyzer benchmark examples/benchmarks/comparisons/latency_vs_injection_fattree_r8_l4_vs_mesh_16x16.yaml --dry-run
+topoanalyzer benchmark examples/benchmarks/system_regression/latency_vs_injection_booksim_smoke.yaml --no-progress
 ```

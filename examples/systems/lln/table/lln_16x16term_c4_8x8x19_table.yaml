@@ -1,0 +1,30 @@
+name: lln_16x16term_c4_8x8x19_table
+
+topology:
+  type: lln
+  params:
+    # CMesh-style scaling from the paper: an 8x8 router grid with
+    # concentration 4 represents 16x16 terminals per layer.
+    x: 8
+    y: 8
+    layers: 19
+    concentration: 4
+    horizontal_ports: 4
+    vertical_pillars: 4
+    min_long_hops: 2
+    coverage: full_clique
+
+links:
+  default:
+    latency_cycles: 1
+    bandwidth: 64GB/s
+  classes:
+    long:
+      latency_cycles: 2
+      bandwidth: 64GB/s
+    vertical:
+      latency_cycles: 1
+      bandwidth: 64GB/s
+
+routing:
+  type: lln_table

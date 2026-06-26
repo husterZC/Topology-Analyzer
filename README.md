@@ -62,6 +62,7 @@ make clean-runs
 | Dragonfly | `dragonfly` | `p`, `a`, `h`, `groups` | Local groups plus global links. |
 | SlimNoC | `slimnoc` | `q`, `concentration` | MMS/SlimFly-style diameter-2 graph. |
 | UBMesh | `ubmesh` | `dimensions`, `dimension_names`, `concentration` | nD-FullMesh core from the UBMesh paper. |
+| LLN | `lln` | `x`, `y`, `layers`, `vertical_pillars`, `concentration` | 3D low-radix long-link network from Xu et al. |
 | Fat-tree | `fattree` | `radix`, `levels` | Regular radix-split Fat-tree. |
 
 ## Supported Routing Algorithms
@@ -87,6 +88,8 @@ make clean-runs
 | `ubmesh_apr_hash` | `ubmesh` | Static APR-style hashed detour routing. |
 | `ubmesh_apr_runtime` | `ubmesh` | BookSim runtime APR marker backend. |
 | `ubmesh_tfc` | `ubmesh` | Static two-VL TFC approximation. |
+| `lln_table` | `lln` | Paper-style deterministic long-link table routing. |
+| `lln_dor_fallback` | `lln` | LLN table routing with explicit core-mesh DOR fallback. |
 | `fattree_lca` | `fattree` | Deterministic nearest-common-ancestor routing. |
 | `fattree_nca_hash` | `fattree` | Balanced static ECMP-style NCA routing. |
 | `fattree_dmodk` | `fattree` | Deterministic D-mod-k-style routing. |

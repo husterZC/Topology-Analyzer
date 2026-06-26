@@ -41,7 +41,9 @@ include `fattree_dmodk`, `fattree_dmodc`, and BookSim-runtime `fattree_anca`.
 Ruche, Hypercube, Dragonfly, SlimNoC, and UBMesh systems also include stronger
 static candidates such as `ruche_lash`, `ruche_valiant_hash`,
 `hypercube_lash`, `hypercube_valiant_hash`, `dragonfly_valiant_hash`,
-`slimnoc_valiant_hash`, `ubmesh_apr_hash`, and `ubmesh_tfc`.
+`slimnoc_valiant_hash`, `ubmesh_apr_hash`, and `ubmesh_tfc`. LLN systems use
+the paper-style `lln_table` route generator, or `lln_dor_fallback` when the
+configured layers cannot cover every non-mesh projected pair.
 
 ```yaml
 name: fattree_r8_l4_nca_hash

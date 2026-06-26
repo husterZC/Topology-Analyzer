@@ -14,6 +14,10 @@ from topoanalyzer.routing.hypercube_lash import HypercubeLashRoutingGenerator
 from topoanalyzer.routing.hypercube_valiant_hash import (
     HypercubeValiantHashRoutingGenerator,
 )
+from topoanalyzer.routing.lln_table import (
+    LLNDORFallbackRoutingGenerator,
+    LLNTableRoutingGenerator,
+)
 from topoanalyzer.routing.mesh_xy import Mesh2DXYRoutingGenerator
 from topoanalyzer.routing.mesh_xyz import Mesh3DXYZRoutingGenerator
 from topoanalyzer.routing.ruche_lash import Ruche3DLashRoutingGenerator
@@ -46,6 +50,8 @@ __all__ = [
     "HypercubeECubeRoutingGenerator",
     "HypercubeLashRoutingGenerator",
     "HypercubeValiantHashRoutingGenerator",
+    "LLNDORFallbackRoutingGenerator",
+    "LLNTableRoutingGenerator",
     "Mesh2DXYRoutingGenerator",
     "Mesh3DXYZRoutingGenerator",
     "Ruche3DLashRoutingGenerator",

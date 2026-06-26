@@ -21,6 +21,10 @@ from topoanalyzer.routing.hypercube_lash import HypercubeLashRoutingGenerator
 from topoanalyzer.routing.hypercube_valiant_hash import (
     HypercubeValiantHashRoutingGenerator,
 )
+from topoanalyzer.routing.lln_table import (
+    LLNDORFallbackRoutingGenerator,
+    LLNTableRoutingGenerator,
+)
 from topoanalyzer.routing.mesh_xy import Mesh2DXYRoutingGenerator
 from topoanalyzer.routing.mesh_xyz import Mesh3DXYZRoutingGenerator
 from topoanalyzer.routing.ruche_lash import Ruche3DLashRoutingGenerator
@@ -42,6 +46,7 @@ from topoanalyzer.routing.ubmesh_tfc import UBMeshTFCRoutingGenerator
 from topoanalyzer.topologies.dragonfly import DragonflyParams, DragonflyTopologyBuilder
 from topoanalyzer.topologies.fattree import FatTreeParams, FatTreeTopologyBuilder
 from topoanalyzer.topologies.hypercube import HypercubeParams, HypercubeTopologyBuilder
+from topoanalyzer.topologies.lln import LLNParams, LLNTopologyBuilder
 from topoanalyzer.topologies.mesh2d import Mesh2DParams, Mesh2DTopologyBuilder
 from topoanalyzer.topologies.mesh3d import Mesh3DParams, Mesh3DTopologyBuilder
 from topoanalyzer.topologies.ruche3d import Ruche3DParams, Ruche3DTopologyBuilder
@@ -87,6 +92,9 @@ def build_system_from_dict(data: dict[str, Any]) -> System:
     elif topology_type == "ubmesh":
         topology_params = UBMeshParams.from_dict(topology_spec["params"])
         topology_builder = UBMeshTopologyBuilder()
+    elif topology_type == "lln":
+        topology_params = LLNParams.from_dict(topology_spec["params"])
+        topology_builder = LLNTopologyBuilder()
     elif topology_type == "fattree":
         topology_params = FatTreeParams.from_dict(topology_spec["params"])
         topology_builder = FatTreeTopologyBuilder()
@@ -157,6 +165,10 @@ def build_system_from_dict(data: dict[str, Any]) -> System:
         routing_generator = UBMeshTFCRoutingGenerator(
             seed=int(routing_spec.get("seed", 0)),
         )
+    elif routing_type == "lln_table":
+        routing_generator = LLNTableRoutingGenerator()
+    elif routing_type == "lln_dor_fallback":
+        routing_generator = LLNDORFallbackRoutingGenerator()
     elif routing_type == "fattree_lca":
         routing_generator = FatTreeLCARoutingGenerator()
     elif routing_type == "fattree_nca_hash":

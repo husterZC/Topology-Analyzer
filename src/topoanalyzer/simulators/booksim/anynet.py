@@ -205,6 +205,8 @@ class AnyNetTableExporter:
             terminals_by_destination_router[terminal.router_id].append(terminal)
 
         output_ports = self.output_ports(system, router_ids, router_index, terminals)
+        terminal_route_lookup = _terminal_route_lookup(system)
+        route_lookup = _route_lookup(system)
         destination_routers = [
             router_id
             for router_id in router_ids
@@ -228,10 +230,11 @@ class AnyNetTableExporter:
 
                 for terminal in terminals_by_destination_router[destination]:
                     next_hop, route_vc = _route_for_terminal(
-                        system,
                         current,
                         destination,
                         terminal.terminal_id,
+                        terminal_route_lookup,
+                        route_lookup,
                     )
                     lines.append(
                         f"{current_idx} {terminal.terminal_id} "
@@ -318,23 +321,43 @@ def _coord_sort_key(coord: object) -> tuple[int, ...]:
     return (0,)
 
 
+def _terminal_route_lookup(system: System) -> dict[tuple[str, int], tuple[str, int]]:
+    terminal_routes = system.routing_table.metadata.get("terminal_next_hops")
+    if not isinstance(terminal_routes, dict):
+        return {}
+
+    lookup: dict[tuple[str, int], tuple[str, int]] = {}
+    for current, current_routes in terminal_routes.items():
+        if not isinstance(current_routes, dict):
+            continue
+        for terminal_id, route in current_routes.items():
+            if isinstance(route, dict):
+                lookup[(str(current), int(terminal_id))] = (
+                    str(route["next_hop"]),
+                    int(route.get("vc", 0)),
+                )
+    return lookup
+
+
+def _route_lookup(system: System) -> dict[tuple[str, str], tuple[str, int]]:
+    return {
+        (entry.current, entry.destination): (entry.next_hop, entry.vc)
+        for entry in system.routing_table.entries
+    }
+
+
 def _route_for_terminal(
-    system: System,
     current: str,
     destination_router: str,
     terminal_id: int,
+    terminal_route_lookup: dict[tuple[str, int], tuple[str, int]],
+    route_lookup: dict[tuple[str, str], tuple[str, int]],
 ) -> tuple[str, int]:
-    terminal_routes = system.routing_table.metadata.get("terminal_next_hops")
-    if isinstance(terminal_routes, dict):
-        current_routes = terminal_routes.get(current)
-        if isinstance(current_routes, dict):
-            route = current_routes.get(str(terminal_id))
-            if isinstance(route, dict):
-                next_hop = str(route["next_hop"])
-                vc = int(route.get("vc", 0))
-                return next_hop, vc
+    terminal_route = terminal_route_lookup.get((current, terminal_id))
+    if terminal_route is not None:
+        return terminal_route
 
-    route = system.routing_table.next_hop_with_vc(current, destination_router)
+    route = route_lookup.get((current, destination_router))
     if route is None:
         raise ValueError(
             "missing next hop while exporting BookSim route table: "

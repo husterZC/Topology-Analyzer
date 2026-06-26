@@ -1,0 +1,33 @@
+benchmark:
+  type: latency_vs_injection_rate
+  injection_rates: [0.001, 0.01, 0.1]
+  injection_rate_unit: flits/node/cycle
+  packet_size: 1
+  traffic: uniform
+  warmup_cycles: 100
+  sample_cycles: 500
+  max_samples: 1
+  repetitions: 1
+  num_vcs: 4
+  vc_buffer_size: 4
+  router_latency: 1
+  timeout_seconds: 120
+  stop_on_error: true
+
+systems:
+  - ../../systems/mesh2d/xy/mesh2d_2x2_xy.yaml
+  - ../../systems/fattree/anca/fattree_r8_l4_anca.yaml
+  - ../../systems/fattree/nca_hash/fattree_r8_l4_nca_hash.yaml
+  - ../../systems/lln/table/lln_4x4x5_table.yaml
+  - ../../systems/slimnoc/min/slimnoc_q5_p4_min.yaml
+  - ../../systems/ubmesh/apr_hash/ubmesh_8x8_apr_hash.yaml
+
+booksim:
+  executable: booksim
+  backend: auto
+
+plot:
+  y_scale: log
+  emit_companion_plot: false
+
+output_dir: runs/system_regression

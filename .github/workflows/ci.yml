@@ -41,6 +41,13 @@ jobs:
             --dry-run \
             --no-progress
 
+      - name: Check system regression materialization
+        run: |
+          topoanalyzer benchmark \
+            examples/benchmarks/system_regression/latency_vs_injection_ci_materialize.yaml \
+            --dry-run \
+            --no-progress
+
       - name: Install BookSim build dependencies
         run: |
           sudo apt-get update
@@ -53,4 +60,10 @@ jobs:
         run: |
           topoanalyzer benchmark \
             .github/benchmarks/booksim_smoke.yaml \
+            --no-progress
+
+      - name: Check system regression booksim
+        run: |
+          topoanalyzer benchmark \
+            examples/benchmarks/system_regression/latency_vs_injection_booksim_smoke.yaml \
             --no-progress

@@ -30,6 +30,9 @@ These formulas describe the graph models implemented in this repository.
   is configured with the `groups` field.
 - For UBMesh formulas, `dimensions=[L_0,...,L_{d-1}]` describes the
   nD-FullMesh core and `b_i` is one-way bandwidth for dimension `i`.
+- For LLN formulas, `L` is cache-layer count, `T=L+1` is total layer count,
+  `G=x*y` is routers per layer, and `M=(x-1)*y+x*(y-1)` is the 2D mesh edge
+  count per layer. `p_v` is the modeled number of vertical pillars per router.
 - Diameter is router-hop diameter. Terminal injection/ejection hops are not
   modeled as graph links.
 - Bisection bandwidth is the minimum one-way aggregate bandwidth across any
@@ -50,6 +53,7 @@ These formulas describe the graph models implemented in this repository.
 | `dragonfly` default max | `g=a*h+1` | `a*(a*h+1)` | `a*p*(a*h+1)` |
 | `slimnoc` | `q`, `p` | `2*q^2` | `2*q^2*p` |
 | `ubmesh` | `dimensions=[L_i]`, `c` | `prod_i L_i` | `c*prod_i L_i` |
+| `lln` | `x`, `y`, `T`, `c` | `x*y*T` | `c*x*y*T` |
 | `fattree` | `radix=r`, `levels=L`, `s=r/2` | `L*s^(L-1)` | `s^L` |
 
 For topologies with explicit dimensions, the implementation has no fixed
@@ -68,6 +72,8 @@ mathematical maximum beyond memory/runtime limits and validation constraints.
 | `dragonfly` full default | `3` for cross-group worst case |
 | `slimnoc` | `2` |
 | `ubmesh` | `count_i(L_i > 1)` |
+| `lln` full coverage | `3` |
+| `lln` partial coverage | `<= (x-1)+(y-1)+2` |
 | `fattree` | `2*(L-1)` between leaf routers |
 
 For `ruche3d`, `L_A` is the dimension length and `s_A` is the ruche stride in
@@ -88,6 +94,7 @@ ruche systems.
 | `dragonfly` group-level | `floor(g^2/4)*b_global` |
 | `slimnoc` exact graph cut | `b * min_{size(S)=q^2} cut_edges(S)` |
 | `ubmesh` dimension-aligned min-bisection | `min_i (R/L_i)*floor(L_i/2)*ceil(L_i/2)*b_i` |
+| `lln` full projected clique estimate | `min(floor(G^2/4)*b_long, G*p_v*b_vertical)` |
 | `fattree` ideal full bisection | `floor(N/2)*b` |
 
 For the `ruche3d` formula:
@@ -512,6 +519,117 @@ links:
 or router ID endpoints such as `ub.0.0.0.0`.
 
 <pre>Reference used: UBMesh paper, arXiv <font color="#06989A">2503.20377</font>: https://arxiv.org/pdf/2503.20377</pre>
+
+</details>
+
+<details>
+<summary><code>lln</code>: low-radix low-diameter 3D long-link network</summary>
+
+```yaml
+topology:
+  type: lln
+  params:
+    x: 4
+    y: 4
+    layers: 5
+    concentration: 1
+    horizontal_ports: 4
+    vertical_pillars: 4
+    min_long_hops: 2
+    coverage: full_clique
+```
+
+Parameters:
+
+- `x`, `y`: routers in the projected 2D grid. Required, integers at least `2`.
+- `layers`: total 3D layers, including core layer `0`. Required unless using
+  `cache_layers`, which is interpreted as `layers = cache_layers + 1`.
+- `concentration`: endpoints per router. Optional, positive integer, default
+  `1`.
+- `horizontal_ports`: maximum long-link degree per router in one cache layer.
+  Optional, default `4`, matching the paper's low-radix target.
+- `vertical_pillars`: modeled number of vertical pillar bundles per router.
+  Optional, default `4`. The current graph uses one abstract vertical edge
+  between layer pairs and records the pillar count in metadata/formulas.
+- `min_long_hops`: minimum projected Manhattan distance for a long link.
+  Optional, default `2`; 1-hop pairs are handled by the core mesh.
+- `coverage`: `full_clique` or `partial_greedy`. `full_clique` requires every
+  non-mesh projected pair to be placed in one cache layer.
+
+Connectivity:
+
+Layer `0` preserves a normal 2D mesh. Cache layers contain deterministic greedy
+placements of long projected links. Each `(x,y)` vertical column has one-hop
+abstract vertical connectivity between every layer, matching the paper's
+one-hop pillar assumption. The projected long links slice a clique across cache
+layers while respecting per-layer mesh-equivalent link count and per-router
+horizontal port budget.
+
+Parameter constraints:
+
+```text
+x >= 2
+y >= 2
+layers >= 2
+cache_layers = layers - 1
+G = x*y
+M = (x-1)*y + x*(y-1)
+K = G*(G-1)/2
+required_long_edges = K - M
+```
+
+For `coverage: full_clique`, the cache layers must be enough to place every
+non-mesh projected pair as a long link:
+
+```text
+cache_layers >= ceil(required_long_edges / M)
+layers >= 1 + ceil((K - M) / M)
+```
+
+This is a necessary lower bound. The implementation also enforces the
+per-router `horizontal_ports` budget during deterministic greedy placement, so
+some sizes may need more layers than the lower bound. Use `coverage:
+full_clique` when insufficient layers should be rejected. Use `coverage:
+partial_greedy` when missing long links are acceptable and should be routed
+through the preserved core mesh.
+
+For a square `k x k` LLN with `horizontal_ports=4` and `min_long_hops=2`, the
+paper's lower bound for full coverage is:
+
+```text
+cache_layers_min = ceil(k*(k+1)/4 - 1)
+total_layers_min = cache_layers_min + 1
+```
+
+Examples:
+
+- `4x4`: `cache_layers_min=4`, so `layers=5`.
+- `5x5`: `cache_layers_min=7`, so `layers=8`.
+- `6x6`: `cache_layers_min=10`, so `layers=11`.
+
+For a non-concentrated `16x16` router grid, full coverage needs about `69`
+total layers with the repository's greedy placement. That is usually too large
+for practical experiments. The example
+`examples/systems/lln/table/lln_16x16term_c4_8x8x19_table.yaml` follows the
+paper's CMesh scaling idea instead: an `8x8` router grid with
+`concentration=4` represents `16x16` terminals per layer and uses `layers=19`
+for full greedy coverage.
+
+Router IDs:
+
+```text
+lln.<x>.<y>.<layer>
+```
+
+Link classes:
+
+- `core_x`, `core_y`: core-layer mesh links.
+- `long`: cache-layer long links.
+- `vertical`: one-hop vertical pillar links.
+
+Pair overrides use 3D coordinate endpoints such as `src: [0, 0, 0]`.
+
+<pre>Reference used: A low-radix and low-diameter 3D interconnection network design, IEEE document <font color="#06989A">4798234</font>: https://ieeexplore.ieee.org/document/4798234</pre>
 
 </details>
 

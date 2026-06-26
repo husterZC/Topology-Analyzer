@@ -1,0 +1,65 @@
+benchmark:
+  type: latency_vs_injection_rate
+  injection_rates: [0.001, 0.01, 0.1]
+  injection_rate_unit: flits/node/cycle
+  packet_size: 1
+  traffic: uniform
+  warmup_cycles: 100
+  sample_cycles: 500
+  max_samples: 1
+  repetitions: 1
+  num_vcs: 4
+  vc_buffer_size: 4
+  router_latency: 1
+  timeout_seconds: 120
+  stop_on_error: true
+
+systems:
+  - ../../systems/dragonfly/min/dragonfly_p2_a4_h2_min.yaml
+  - ../../systems/dragonfly/valiant_hash/dragonfly_p2_a4_h2_valiant_hash.yaml
+  - ../../systems/fattree/anca/fattree_r8_l4_anca.yaml
+  - ../../systems/fattree/dmodc/fattree_r8_l4_dmodc.yaml
+  - ../../systems/fattree/dmodk/fattree_r8_l4_dmodk.yaml
+  - ../../systems/fattree/lca/fattree_r8_l4_lca.yaml
+  - ../../systems/fattree/nca_hash/fattree_r8_l4_nca_hash.yaml
+  - ../../systems/hypercube/ecube/hypercube_d4_ecube.yaml
+  - ../../systems/hypercube/lash/hypercube_d4_lash.yaml
+  - ../../systems/hypercube/valiant_hash/hypercube_d4_valiant_hash.yaml
+  - ../../systems/lln/dor_fallback/lln_4x4x4_dor_fallback.yaml
+  - ../../systems/lln/table/lln_4x4x5_table.yaml
+  - ../../systems/mesh2d/graph_lash/mesh2d_2x2_graph_lash.yaml
+  - ../../systems/mesh2d/graph_lash/mesh2d_4x4_graph_lash.yaml
+  - ../../systems/mesh2d/graph_updown/mesh2d_2x2_graph_updown.yaml
+  - ../../systems/mesh2d/graph_updown/mesh2d_4x4_graph_updown.yaml
+  - ../../systems/mesh2d/graph_updown/mesh2d_8x8_graph_updown.yaml
+  - ../../systems/mesh2d/link_variants/mesh2d_4x4_xy_oriented_links.yaml
+  - ../../systems/mesh2d/link_variants/mesh2d_4x4_xy_pair_override.yaml
+  - ../../systems/mesh2d/xy/mesh2d_16x16_xy.yaml
+  - ../../systems/mesh2d/xy/mesh2d_2x2_xy.yaml
+  - ../../systems/mesh2d/xy/mesh2d_4x4_xy.yaml
+  - ../../systems/mesh2d/xy/mesh2d_8x8_xy.yaml
+  - ../../systems/mesh3d/xyz/mesh3d_4x4x2_xyz.yaml
+  - ../../systems/ruche3d/lash/ruche3d_3x3x3_s2_lash.yaml
+  - ../../systems/ruche3d/valiant_hash/ruche3d_4x4x4_s2_valiant_hash.yaml
+  - ../../systems/ruche3d/xyz/ruche3d_4x4x4_s2_xyz.yaml
+  - ../../systems/slimnoc/min/slimnoc_q5_p4_min.yaml
+  - ../../systems/slimnoc/min/slimnoc_q8_p8_min.yaml
+  - ../../systems/slimnoc/min/slimnoc_q9_p8_min.yaml
+  - ../../systems/slimnoc/valiant_hash/slimnoc_q5_p4_valiant_hash.yaml
+  - ../../systems/torus2d/xy/torus2d_4x4_xy.yaml
+  - ../../systems/torus3d/xyz/torus3d_3x3x3_xyz.yaml
+  - ../../systems/ubmesh/apr_hash/ubmesh_8x8_apr_hash.yaml
+  - ../../systems/ubmesh/apr_runtime/ubmesh_8x8_apr_runtime.yaml
+  - ../../systems/ubmesh/dor/ubmesh_8x8_dor.yaml
+  - ../../systems/ubmesh/shortest/ubmesh_8x8_shortest.yaml
+  - ../../systems/ubmesh/tfc/ubmesh_8x8_tfc.yaml
+
+booksim:
+  executable: booksim
+  backend: auto
+
+plot:
+  y_scale: log
+  emit_companion_plot: false
+
+output_dir: runs/system_regression

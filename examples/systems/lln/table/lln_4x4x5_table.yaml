@@ -1,0 +1,28 @@
+name: lln_4x4x5_table
+
+topology:
+  type: lln
+  params:
+    x: 4
+    y: 4
+    layers: 5
+    concentration: 1
+    horizontal_ports: 4
+    vertical_pillars: 4
+    min_long_hops: 2
+    coverage: full_clique
+
+links:
+  default:
+    latency_cycles: 1
+    bandwidth: 64GB/s
+  classes:
+    long:
+      latency_cycles: 2
+      bandwidth: 64GB/s
+    vertical:
+      latency_cycles: 1
+      bandwidth: 64GB/s
+
+routing:
+  type: lln_table

@@ -11,4 +11,4 @@ runs/
 .venv/
 venv/
 external/
-bin/booksim
+bin/
