@@ -59,6 +59,7 @@ Then writes:
 ```text
 results/latency_vs_injection.csv
 results/latency_vs_injection.json
+results/metrics.txt
 plots/latency_vs_injection.png
 plots/latency_vs_injection.pdf
 ```
@@ -67,6 +68,13 @@ The sweep is configured by offered `injection_rate`, but the latency plot uses
 BookSim's measured `accepted_rate * packet_size` on the x-axis. The offered
 rate remains in the CSV so each plotted point can be traced back to the
 requested load.
+
+`results/metrics.txt` summarizes each benchmarked system's static network
+characteristics: terminal/injection nodes, routers, directed links, exact
+router-hop diameter, and bisection bandwidth. The bisection entry includes a
+method field because small systems use an exact balanced router cut, while
+larger systems use a topology formula or coordinate-axis cut when exact
+enumeration would be too expensive.
 
 ### Fields
 
@@ -306,6 +314,7 @@ runs/<run-name>/
   results/
     latency_vs_injection.csv
     latency_vs_injection.json
+    metrics.txt
   plots/
     latency_vs_injection.png
     latency_vs_injection.pdf

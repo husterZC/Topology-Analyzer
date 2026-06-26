@@ -257,6 +257,7 @@ runs/<run-name>/
   results/
     latency_vs_injection.csv
     latency_vs_injection.json
+    metrics.txt
   plots/
     latency_vs_injection.png
     latency_vs_injection.pdf

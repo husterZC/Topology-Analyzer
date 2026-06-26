@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from topoanalyzer.benchmarks.progress import AnsiProgressBar
+from topoanalyzer.benchmarks.network_metrics import write_metrics_text
 from topoanalyzer.model.system import System
 from topoanalyzer.plotting.latency import plot_latency_vs_injection
 from topoanalyzer.simulators.booksim.backend import BookSimBackend
@@ -211,6 +212,7 @@ class LatencyInjectionRunner:
         output_dir = self._create_output_dir(output_root, run_name)
         self._write_system_artifacts([case.system for case in cases], output_dir)
         self._write_case_artifacts(cases, output_dir)
+        self._write_network_metrics([case.system for case in cases], output_dir)
 
         records: list[BenchmarkRecord] = []
         total = sum(
@@ -361,6 +363,10 @@ class LatencyInjectionRunner:
             case_dir = root / case.name
             case_dir.mkdir()
             _write_json(case_dir / "case.json", case.to_dict())
+
+    @staticmethod
+    def _write_network_metrics(systems: list[System], output_dir: Path) -> None:
+        write_metrics_text(systems, output_dir / "results" / "metrics.txt")
 
     @staticmethod
     def _write_results(records: list[BenchmarkRecord], output_dir: Path) -> None:

@@ -74,6 +74,16 @@ class BenchmarkTests(unittest.TestCase):
             )
             self.assertIn("injection_rate_unit", csv_text)
             self.assertIn("flits/node/cycle", csv_text)
+            metrics_text = (output / "results" / "metrics.txt").read_text(
+                encoding="utf-8"
+            )
+            self.assertIn("[mesh2d_2x2_xy]", metrics_text)
+            self.assertIn("nodes: 4", metrics_text)
+            self.assertIn("routers: 4", metrics_text)
+            self.assertIn("links: 8", metrics_text)
+            self.assertIn("diameter: 2", metrics_text)
+            self.assertIn("bisection_bandwidth: 128GB/s", metrics_text)
+            self.assertIn("bisection_method: exact_balanced_router_cut", metrics_text)
 
     def test_case_specific_benchmark_overrides(self):
         system = build_system_from_dict(
