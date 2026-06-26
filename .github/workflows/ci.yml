@@ -8,15 +8,13 @@ on:
 permissions:
   contents: read
 
+env:
+  MPLCONFIGDIR: .cache/matplotlib
+
 jobs:
   test:
-    name: Python ${{ matrix.python-version }}
+    name: Python 3.10
     runs-on: ubuntu-latest
-
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.10", "3.11", "3.12"]
 
     steps:
       - name: Checkout
@@ -25,7 +23,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.10"
           cache: pip
 
       - name: Install package
@@ -41,4 +39,18 @@ jobs:
           topoanalyzer benchmark \
             examples/benchmarks/mesh2d/latency_vs_injection_mesh2d.yaml \
             --dry-run \
+            --no-progress
+
+      - name: Install BookSim build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential flex bison
+
+      - name: Install BookSim
+        run: BOOTSTRAP_PYTHON=python make booksim-link
+
+      - name: Check benchmark booksim
+        run: |
+          topoanalyzer benchmark \
+            .github/benchmarks/booksim_smoke.yaml \
             --no-progress
