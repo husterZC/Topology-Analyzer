@@ -1,0 +1,250 @@
+\documentclass[11pt]{article}
+
+\usepackage[a4paper,margin=0.8in]{geometry}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{tabularx}
+
+\title{Topology Comparision}
+\author{Topology Analyzer Research Notes}
+\date{\today}
+
+\newcommand{\toponame}[1]{\texttt{#1}}
+\newcommand{\Gbps}{\mathrm{GB/s}}
+\newcommand{\floor}[1]{\left\lfloor #1 \right\rfloor}
+\newcommand{\ceil}[1]{\left\lceil #1 \right\rceil}
+
+\begin{document}
+\maketitle
+
+\section*{Metric Conventions}
+
+This report compares the graph models currently used by Topology Analyzer.
+Unless otherwise stated, $N$ is the number of terminal or injection nodes,
+$R$ is the number of routers, $k$ is the maximum router radix including local
+terminal ports, $E$ is the number of bidirectional physical router-router link
+pairs, $D$ is router-hop diameter, and $B$ is one-way bisection bandwidth. The
+concrete examples assume homogeneous bidirectional links with latency
+$1$ cycle and one-way bandwidth $b=1\Gbps$.
+
+The repository's benchmark \texttt{metrics.txt} reports directed
+router-router channels for \texttt{links}. For bidirectional examples in this
+report, that directed count is $2E$.
+
+\section{Introduction to Topologies Under Analysis}
+
+\subsection{\toponame{mesh2d}}
+
+A 2D mesh arranges routers on a rectangular $x \times y$ grid. Each router is
+connected to its immediate horizontal and vertical neighbors when such
+neighbors exist. Interior routers therefore have four network links, edge
+routers have fewer, and each router attaches $c$ local terminal nodes.
+
+The parameters are $x$ routers in the X dimension, $y$ routers in the Y
+dimension, and concentration $c$. The common baseline routing is dimension
+order routing, for example XY routing, where packets finish one coordinate
+dimension before moving in the next dimension.
+
+\subsection{\toponame{mesh3d}}
+
+A 3D mesh extends the rectangular mesh to $x \times y \times z$ routers.
+Routers connect to immediate neighbors in the X, Y, and Z dimensions. This
+uses the same local-grid structure as \toponame{mesh2d}, but adds vertical
+connectivity, reducing diameter for a fixed node count when the third dimension
+is physically practical.
+
+The parameters are $x$, $y$, and $z$ routers in each dimension, plus
+concentration $c$.
+
+\subsection{\toponame{dragonfly}}
+
+Dragonfly is a low-diameter grouped topology designed for large-scale high
+performance networks \cite{kim2008dragonfly}. Routers are partitioned into
+groups. Inside each group, the $a$ routers form a local all-to-all subgraph.
+Across groups, global links connect groups so that packets can usually move
+from a source group to a destination group in one global hop, with local hops
+at the source and destination groups.
+
+The parameters are $p$ terminal nodes per router, $a$ routers per group, $h$
+global links per router, and $g$ groups. In this repository, when $g$ is not
+specified, the default full arrangement is $g=ah+1$, giving one global link
+between every pair of groups.
+
+\subsection{\toponame{hypercube}}
+
+A binary hypercube labels routers with $d$-bit binary coordinates. Two routers
+are connected if their labels differ in exactly one bit. This gives exactly
+$d$ network links per router, logarithmic diameter, and high path diversity.
+
+The parameters are dimension $d$ and concentration $c$. With $c=1$, the number
+of terminal nodes equals the number of routers, $2^d$.
+
+\subsection{\toponame{slimnoc}}
+
+SlimNoC is an on-chip network topology derived from Slim Fly and the
+McKay-Miller-Siran diameter-2 graph family \cite{besta2020slimnoc}. Routers
+are generated from a finite-field construction. The graph has two router
+partitions, each partition is organized into $q$ subgroups of $q$ routers, and
+cross links connect the two partitions according to finite-field arithmetic.
+The result is a diameter-2 topology with much lower diameter than a mesh at
+the cost of higher router radix and less geometric locality.
+
+The main topology parameter is finite-field order $q$, with
+$q=4w+\delta$ and $\delta \in \{-1,0,1\}$ for the supported construction.
+The concentration $p$ gives local terminal nodes per router. In the repository
+YAML this concentration can be written as \texttt{concentration} or \texttt{p}.
+
+\subsection{\toponame{ubmesh}}
+
+UBMesh is modeled here as the nD-FullMesh core described by the UB-Mesh paper
+\cite{liao2025ubmesh}. Routers have coordinates
+$(u_0,\ldots,u_{d-1})$ in dimensions $[L_0,\ldots,L_{d-1}]$. Along each
+dimension, all routers that share the other coordinates are fully connected.
+This gives very small diameter, equal to the number of non-singleton
+dimensions, while the router radix grows with the sum of dimension lengths.
+
+The parameters are the dimension lengths $L_i$, optional dimension names, and
+concentration $c$.
+
+\subsection{\toponame{fattree}}
+
+Fat-tree networks increase path diversity and bisection bandwidth by using a
+hierarchical tree-like structure with multiple parents instead of a single
+thin root bottleneck \cite{leiserson1985fattree}. The model used here is a
+radix-split $k$-ary $n$-tree. For router radix $r$, each router has
+$s=r/2$ downward ports and $s=r/2$ upward ports, except at the edges of the
+hierarchy where ports attach to terminals or to adjacent tree levels.
+
+The parameters are router radix $r$ and level count $L$. The split is
+$s=r/2$. Leaf routers each attach $s$ terminal nodes.
+
+\section{Scaling Laws}
+
+Table~\ref{tab:scaling-laws} summarizes the formulas used for the comparison.
+For heterogeneous link bandwidths, replace $b$ with the corresponding
+dimension or class bandwidth. The formulas below use the homogeneous case for
+compactness.
+
+\begin{table}[htbp]
+\centering
+\scriptsize
+\caption{Scaling laws by topology. $E$ counts bidirectional router-router link pairs. $B$ is one-way bisection bandwidth.}
+\label{tab:scaling-laws}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}p{0.13\textwidth}p{0.15\textwidth}p{0.16\textwidth}p{0.16\textwidth}p{0.19\textwidth}p{0.13\textwidth}p{0.22\textwidth}@{}}
+\toprule
+Topology & Parameters & Nodes $N$ & Max router radix $k$ & Links $E$ & Diameter $D$ & Bisection bandwidth $B$ \\
+\midrule
+\toponame{mesh2d}
+& $x,y,c$
+& $cxy$
+& $c+\min(2,x-1)+\min(2,y-1)$
+& $(x-1)y+x(y-1)$
+& $(x-1)+(y-1)$
+& $\min(y,x)b$ \\
+\toponame{mesh3d}
+& $x,y,z,c$
+& $cxyz$
+& $c+\min(2,x-1)+\min(2,y-1)+\min(2,z-1)$
+& $(x-1)yz+x(y-1)z+xy(z-1)$
+& $(x-1)+(y-1)+(z-1)$
+& $\min(yz,xz,xy)b$ \\
+\toponame{dragonfly}
+& $p,a,h,g$
+& $pag$
+& $p+(a-1)+\min(h,g-1)$
+& $g\binom{a}{2}+\binom{g}{2}$
+& $3$ for full cross-group case
+& $\floor{g/2}\ceil{g/2}b$ \\
+\toponame{hypercube}
+& $d,c$
+& $c2^d$
+& $c+d$
+& $d2^{d-1}$
+& $d$
+& $2^{d-1}b$ \\
+\toponame{slimnoc}
+& $q,p,\delta$
+& $2q^2p$
+& $p+\frac{3q-\delta}{2}$
+& $q^2\frac{3q-\delta}{2}$
+& $2$
+& $2(q-1)\floor{q/2}\ceil{q/2}b$ \\
+\toponame{ubmesh}
+& $[L_0,\ldots,L_{d-1}],c$
+& $c\prod_i L_i$
+& $c+\sum_i(L_i-1)$
+& $\frac{1}{2}\left(\prod_iL_i\right)\sum_i(L_i-1)$
+& $\sum_i \mathbf{1}[L_i>1]$
+& $\min_i\left(\frac{R}{L_i}\floor{L_i/2}\ceil{L_i/2}b\right)$ \\
+\toponame{fattree}
+& $r,L,s=r/2$
+& $s^L$
+& $r$
+& $(L-1)s^L$
+& $2(L-1)$
+& $\floor{N/2}b$ \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+The Dragonfly bisection formula is the group-level non-strict bisection used
+by the repository's topology-level estimate. For odd $g$, it partitions groups
+as $\floor{g/2}$ and $\ceil{g/2}$. The Fat-tree bisection formula is the
+terminal/full-bisection estimate for a regular full-bisection Fat-tree.
+
+\section{Concrete Examples Comparison}
+
+Tables~\ref{tab:examples-256} and~\ref{tab:examples-1024} instantiate the
+formulas with homogeneous links of latency $1$ cycle and bandwidth
+$1\Gbps$. The ``No. nodes'' column counts terminal endpoints. The
+\toponame{slimnoc} rows are not exactly 256 or 1024 nodes because the SlimNoC
+finite-field construction only permits specific graph sizes.
+
+\begin{table}[htbp]
+\centering
+\caption{Topology examples around 256 terminal nodes.}
+\label{tab:examples-256}
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+Type & No. nodes & Router radix & No. links & Diameter & Bisection bandwidth \\
+\midrule
+\toponame{mesh2d\_16x16} & 256 & 5 & 480 & 30 & $16\Gbps$ \\
+\toponame{mesh3d\_8x8x4} & 256 & 7 & 640 & 17 & $32\Gbps$ \\
+\toponame{dragonfly\_p2\_a8\_h2} & 272 & 11 & 612 & 3 & $72\Gbps$ \\
+\toponame{hypercube\_d8} & 256 & 9 & 1024 & 8 & $128\Gbps$ \\
+\toponame{slimnoc\_q5\_p4} & 200 & 11 & 175 & 2 & $48\Gbps$ \\
+\toponame{ubmesh\_16x16} & 256 & 31 & 3840 & 2 & $1024\Gbps$ \\
+\toponame{fattree\_r8\_l4} & 256 & 8 & 768 & 6 & $128\Gbps$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Topology examples around 1024 terminal nodes.}
+\label{tab:examples-1024}
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+Type & No. nodes & Router radix & No. links & Diameter & Bisection bandwidth \\
+\midrule
+\toponame{mesh2d\_32x32} & 1024 & 5 & 1984 & 62 & $32\Gbps$ \\
+\toponame{mesh3d\_8x8x16} & 1024 & 7 & 2752 & 29 & $64\Gbps$ \\
+\toponame{dragonfly\_p4\_a8\_h4} & 1056 & 15 & 1452 & 3 & $272\Gbps$ \\
+\toponame{hypercube\_d10} & 1024 & 11 & 5120 & 10 & $512\Gbps$ \\
+\toponame{slimnoc\_q9\_p8} & 1296 & 21 & 1053 & 2 & $320\Gbps$ \\
+\toponame{ubmesh\_8x8x16} & 1024 & 30 & 14848 & 3 & $2048\Gbps$ \\
+\toponame{fattree\_r8\_l5} & 1024 & 8 & 4096 & 8 & $512\Gbps$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}
