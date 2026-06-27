@@ -78,6 +78,9 @@ topoanalyzer view examples/systems/ubmesh/dor/ubmesh_8x8_dor.yaml \
 topoanalyzer view examples/systems/dragonfly/min/dragonfly_p2_a4_h2_min.yaml \
   --output-dir views/dragonfly_p2_a4_h2
 
+topoanalyzer view examples/systems/fattree/lca/fattree_r8_l4_lca.yaml \
+  --output-dir views/fattree_r8_l4
+
 topoanalyzer view examples/systems/hypercube/ecube/hypercube_d4_ecube.yaml \
   --output-dir views/hypercube_d4
 ```
@@ -94,6 +97,9 @@ topoanalyzer view examples/systems/hypercube/ecube/hypercube_d4_ecube.yaml \
 - For SlimNoC Figure 7(b), `local cross links` are the shown intra-group
   vertical links and `inter-group cross links` are the omitted full-system
   connections.
+- For Fat-tree, routers are stacked by switch level: leaves at the bottom,
+  intermediate routers above, and root-level routers at the top. Terminal
+  cuboids attach only to leaf routers.
 - Labels toggle: show router and node labels.
 - Terminal/injection nodes are rendered as small cuboids with attachment links
   back to their routers.

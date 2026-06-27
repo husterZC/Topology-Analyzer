@@ -36,6 +36,7 @@ class ViewerTests(unittest.TestCase):
             ),
             _system("slimnoc", {"q": 5, "concentration": 1}, "slimnoc_min"),
             _system("dragonfly", {"p": 2, "a": 4, "h": 2}, "dragonfly_min"),
+            _system("fattree", {"radix": 4, "levels": 3}, "fattree_lca"),
             _system("hypercube", {"dimension": 4}, "hypercube_ecube"),
         ]
 
@@ -130,6 +131,35 @@ class ViewerTests(unittest.TestCase):
         self.assertNotEqual(
             nodes["sn.g0.a0.b0"]["position"][1],
             nodes["sn.g1.a0.b0"]["position"][1],
+        )
+
+    def test_fattree_scene_uses_leaf_terminals_and_level_layout(self):
+        system = _system("fattree", {"radix": 4, "levels": 3}, "fattree_lca")
+
+        scene = build_scene(system)
+
+        self.assertEqual(scene["layout"]["name"], "fattree_layers")
+        terminal_nodes = [
+            node for node in scene["nodes"] if node["kind"] == "terminal"
+        ]
+        self.assertEqual(scene["system"]["terminal_count"], 8)
+        self.assertEqual(len(terminal_nodes), 8)
+        for node in terminal_nodes:
+            router_id = node["metadata"]["attached_router"]
+            self.assertEqual(system.graph.nodes[router_id].metadata["level"], 0)
+
+        nodes = {node["id"]: node for node in scene["nodes"]}
+        self.assertNotEqual(
+            nodes["ft.l0.0.0"]["position"],
+            nodes["ft.l1.0.0"]["position"],
+        )
+        self.assertLess(
+            nodes["ft.l0.0.0"]["position"][1],
+            nodes["ft.l1.0.0"]["position"][1],
+        )
+        self.assertLess(
+            nodes["ft.l1.0.0"]["position"][1],
+            nodes["ft.l2.0.0"]["position"][1],
         )
 
     def test_view_cli_exports_index(self):

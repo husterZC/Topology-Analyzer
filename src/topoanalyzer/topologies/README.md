@@ -712,6 +712,14 @@ Parameters:
 
 The builder uses `split = radix / 2`. For `radix: 8`, `split = 4`.
 
+This is a radix-split folded Fat-tree / k-ary n-tree model, not a literal
+single-root tree with fewer switches at each higher level. Each level contains
+`routers_per_level` routers. The top level is a set of root-level routers, and
+terminal nodes attach only to level-`0` leaf routers.
+
+When using BookSim's native `fattree` backend, BookSim's `k` field maps to this
+repo's `split`, not to this repo's total router `radix`.
+
 Generated size:
 
 ```text

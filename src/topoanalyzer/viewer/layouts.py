@@ -271,6 +271,64 @@ class DragonflyLayout(LayoutStrategy):
         ]
 
 
+class FatTreeLayout(LayoutStrategy):
+    name = "fattree_layers"
+    description = "Fat-tree routers arranged by switch level from leaves to roots."
+
+    def supports(self, graph: TopologyGraph) -> bool:
+        return graph.topology_type == "fattree"
+
+    def position(self, node: Node, graph: TopologyGraph) -> Vector3:
+        level = int(node.metadata.get("level", 0))
+        coord = _coord(node)
+        routers_per_level = int(graph.metadata.get("routers_per_level", 1))
+        columns = max(1, ceil(sqrt(routers_per_level)))
+        if coord:
+            index = _fattree_coord_index(coord, graph)
+        else:
+            index = int(node.metadata.get("booksim_order", 0)) % routers_per_level
+        row_count = ceil(routers_per_level / columns)
+        x = (index % columns - (columns - 1) / 2.0) * 1.0
+        z = (index // columns - (row_count - 1) / 2.0) * 1.0
+        return (x, level * 1.25, z)
+
+    def node_style(self, node: Node, graph: TopologyGraph) -> NodeStyle:
+        role = str(node.metadata.get("role", "intermediate"))
+        if role == "leaf":
+            return NodeStyle(color="#2563eb", size=0.13, group="leaf routers")
+        if role == "root":
+            return NodeStyle(color="#dc2626", size=0.13, group="root routers")
+        return NodeStyle(color="#16a34a", size=0.12, group="intermediate routers")
+
+    def link_style(self, link: Link, graph: TopologyGraph) -> LinkStyle:
+        direction = str(link.metadata.get("direction", "default"))
+        lower_level = int(link.metadata.get("lower_level", 0))
+        if direction == "up":
+            return LinkStyle(
+                _DIMENSION_COLORS[lower_level % len(_DIMENSION_COLORS)],
+                0.52,
+                1.0,
+                f"level {lower_level} up links",
+            )
+        if direction == "down":
+            return LinkStyle(
+                "#94a3b8",
+                0.24,
+                0.75,
+                f"level {lower_level} down links",
+            )
+        return super().link_style(link, graph)
+
+    def camera_presets(self, graph: TopologyGraph) -> list[CameraPreset]:
+        levels = int(graph.metadata.get("levels", 1))
+        target_y = max(0.0, (levels - 1) * 0.62)
+        return [
+            CameraPreset("hierarchy", (7.5, 5.5, 9.0), (0.0, target_y, 0.0)),
+            CameraPreset("front", (0.0, 3.5, 10.5), (0.0, target_y, 0.0)),
+            CameraPreset("top", (0.0, 12.0, 0.001), (0.0, target_y, 0.0)),
+        ]
+
+
 class HypercubeLayout(LayoutStrategy):
     name = "hypercube_stacked_cubes"
     description = "Hypercube bits rendered as cube dimensions and stacked higher-dimensional cubes."
@@ -319,6 +377,7 @@ def strategy_for(graph: TopologyGraph) -> LayoutStrategy:
         UBMeshLayout(),
         SlimNoCLayout(),
         DragonflyLayout(),
+        FatTreeLayout(),
         HypercubeLayout(),
     ):
         if strategy.supports(graph):
@@ -375,6 +434,14 @@ def _coord(node: Node) -> tuple[int, ...]:
 def _coord3(node: Node) -> tuple[int, int, int]:
     coord = list(_coord(node)) + [0, 0, 0]
     return coord[0], coord[1], coord[2]
+
+
+def _fattree_coord_index(coord: tuple[int, ...], graph: TopologyGraph) -> int:
+    split = int(graph.metadata.get("split", 1))
+    index = 0
+    for value in coord:
+        index = index * split + int(value)
+    return index
 
 
 def _coord_position(coord: tuple[int, ...]) -> Vector3:
