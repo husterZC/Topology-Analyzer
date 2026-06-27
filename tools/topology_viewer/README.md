@@ -91,6 +91,8 @@ topoanalyzer view examples/systems/hypercube/ecube/hypercube_d4_ecube.yaml \
 - Mouse wheel: zoom.
 - Right drag or `Shift` + drag: pan.
 - Camera buttons: switch topology-specific views.
+- Click Target buttons: choose whether scene clicks select routers, links, or
+  whichever visible item is hit first.
 - Link checkboxes: show or hide link classes.
 - Network links that share a coordinate plane are drawn with a small in-plane
   curve to reduce straight-line overlap.

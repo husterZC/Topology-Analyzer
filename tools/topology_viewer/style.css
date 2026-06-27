@@ -98,6 +98,17 @@ section {
   border-color: var(--accent);
 }
 
+.segmented-control {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.segmented-control button[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-weight: 700;
+}
+
 .control-row {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);

@@ -24,6 +24,7 @@ const highlightColor = new THREE.Color(0xfacc15);
 let labelsVisible = false;
 let linksVisible = true;
 let linkOpacityScale = 1;
+let clickTargetMode = "both";
 let selection = null;
 let pointerStart = null;
 
@@ -252,6 +253,12 @@ function initUi(data) {
     updateVisualState();
   });
 
+  for (const button of document.querySelectorAll("#click-target-modes button")) {
+    button.addEventListener("click", () => {
+      setClickTargetMode(button.dataset.mode || "both");
+    });
+  }
+
   const filters = document.getElementById("link-filters");
   for (const group of data.legend.linkGroups) {
     const row = document.createElement("label");
@@ -341,9 +348,28 @@ function pickSceneItem(event) {
   pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
   pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
   raycaster.setFromCamera(pointer, camera);
-  const pickableLinks = linkObjects.filter((object) => object.visible);
-  const hits = raycaster.intersectObjects([...nodeObjects, ...pickableLinks], false);
+  const targets = [];
+  if (clickTargetMode === "both" || clickTargetMode === "router") {
+    targets.push(...nodeObjects.filter((object) => object.userData.node.kind !== "terminal"));
+  }
+  if (clickTargetMode === "both" || clickTargetMode === "link") {
+    targets.push(...linkObjects.filter((object) => object.visible));
+  }
+  if (!targets.length) return null;
+  const hits = raycaster.intersectObjects(targets, false);
   return hits.length ? hits[0].object : null;
+}
+
+function setClickTargetMode(mode) {
+  clickTargetMode = ["both", "router", "link"].includes(mode) ? mode : "both";
+  for (const button of document.querySelectorAll("#click-target-modes button")) {
+    button.setAttribute("aria-pressed", String(button.dataset.mode === clickTargetMode));
+  }
+  if (selection) {
+    selection = null;
+    updateVisualState();
+  }
+  setInfoItem(null);
 }
 
 function selectLink(link) {

@@ -10,7 +10,7 @@
 \usepackage{tabularx}
 
 \title{Topology Comparision}
-\author{Topology Analyzer Research Notes}
+\author{Chi Zhang and Codex}
 \date{\today}
 
 \newcommand{\toponame}[1]{\texttt{#1}}
@@ -198,6 +198,18 @@ by the repository's topology-level estimate. For odd $g$, it partitions groups
 as $\floor{g/2}$ and $\ceil{g/2}$. The Fat-tree bisection formula is the
 terminal/full-bisection estimate for a regular full-bisection Fat-tree.
 
+For UBMesh, the large bisection values come from the nD-FullMesh rule, not
+from nearest-neighbor mesh links. Along dimension $i$, each line is a complete
+graph $K_{L_i}$. Splitting that dimension into
+$\floor{L_i/2}$ and $\ceil{L_i/2}$ routers cuts
+$\floor{L_i/2}\ceil{L_i/2}$ links per line, and there are $R/L_i$ such lines.
+For example, \toponame{ubmesh\_16x16\_c4} has $R=256$ routers and $16$
+complete lines in either dimension, so the router-network bisection is
+$16 \cdot 8 \cdot 8 \cdot 1\Gbps = 1024\Gbps$.
+The concentration $c=4$ changes the terminal count and router radix, but it
+does not change the router-router link count or router-network bisection
+bandwidth.
+
 \section{Concrete Examples Comparison}
 
 Tables~\ref{tab:examples-256} and~\ref{tab:examples-1024} instantiate the
@@ -219,7 +231,10 @@ Type & No. nodes & Router radix & No. links & Diameter & Bisection bandwidth \\
 \toponame{dragonfly\_p2\_a8\_h2} & 272 & 11 & 612 & 3 & $72\Gbps$ \\
 \toponame{hypercube\_d8} & 256 & 9 & 1024 & 8 & $128\Gbps$ \\
 \toponame{slimnoc\_q5\_p4} & 200 & 11 & 175 & 2 & $48\Gbps$ \\
-\toponame{ubmesh\_16x16} & 256 & 31 & 3840 & 2 & $1024\Gbps$ \\
+\toponame{ubmesh\_8x8\_c4} & 256 & 18 & 448 & 2 & $128\Gbps$ \\
+\toponame{ubmesh\_4x4x4\_c4} & 256 & 13 & 288 & 3 & $64\Gbps$ \\
+\toponame{ubmesh\_4x4x2x2\_c4} & 256 & 12 & 256 & 4 & $32\Gbps$ \\
+\toponame{ubmesh\_4x2x2x2x2\_c4} & 256 & 11 & 224 & 5 & $32\Gbps$ \\
 \toponame{fattree\_r8\_l4} & 256 & 8 & 768 & 6 & $128\Gbps$ \\
 \bottomrule
 \end{tabular}
@@ -238,7 +253,10 @@ Type & No. nodes & Router radix & No. links & Diameter & Bisection bandwidth \\
 \toponame{dragonfly\_p4\_a8\_h4} & 1056 & 15 & 1452 & 3 & $272\Gbps$ \\
 \toponame{hypercube\_d10} & 1024 & 11 & 5120 & 10 & $512\Gbps$ \\
 \toponame{slimnoc\_q9\_p8} & 1296 & 21 & 1053 & 2 & $320\Gbps$ \\
-\toponame{ubmesh\_8x8x16} & 1024 & 30 & 14848 & 3 & $2048\Gbps$ \\
+\toponame{ubmesh\_16x16\_c4} & 1024 & 34 & 3840 & 2 & $1024\Gbps$ \\
+\toponame{ubmesh\_8x8x4\_c4} & 1024 & 21 & 2176 & 3 & $256\Gbps$ \\
+\toponame{ubmesh\_4x4x4x4\_c4} & 1024 & 16 & 1536 & 4 & $256\Gbps$ \\
+\toponame{ubmesh\_4x4x4x2x2\_c4} & 1024 & 15 & 1408 & 5 & $128\Gbps$ \\
 \toponame{fattree\_r8\_l5} & 1024 & 8 & 4096 & 8 & $512\Gbps$ \\
 \bottomrule
 \end{tabular}
