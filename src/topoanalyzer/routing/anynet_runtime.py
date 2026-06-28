@@ -9,18 +9,9 @@ from topoanalyzer.model.routing import RoutingTable
 from topoanalyzer.model.validation import ValidationReport
 from topoanalyzer.routing.base import RoutingGenerator
 from topoanalyzer.routing.dragonfly_min import DragonflyMinimalRoutingGenerator
-from topoanalyzer.routing.dragonfly_valiant_hash import (
-    DragonflyValiantHashRoutingGenerator,
-)
 from topoanalyzer.routing.hypercube_ecube import HypercubeECubeRoutingGenerator
-from topoanalyzer.routing.hypercube_valiant_hash import (
-    HypercubeValiantHashRoutingGenerator,
-)
 from topoanalyzer.routing.lln_table import LLNTableRoutingGenerator
 from topoanalyzer.routing.slimnoc_min import SlimNoCMinimalRoutingGenerator
-from topoanalyzer.routing.slimnoc_valiant_hash import (
-    SlimNoCValiantHashRoutingGenerator,
-)
 
 
 @dataclass(frozen=True)
@@ -118,13 +109,13 @@ class DragonflyValGRuntimeRoutingGenerator(AnyNetRuntimeRoutingGenerator):
         "a hashed/random intermediate group before the final destination group."
     )
     vc_policy = {
-        "0": "source to intermediate group",
-        "1": "intermediate to destination group",
-        "2": "destination-group delivery",
+        "0": "deterministic minimal escape",
+        "1": "source to intermediate group",
+        "2": "intermediate to destination group",
     }
 
     def representative_generator(self) -> RoutingGenerator:
-        return DragonflyValiantHashRoutingGenerator(seed=self.seed)
+        return DragonflyMinimalRoutingGenerator()
 
 
 class DragonflyValNRuntimeRoutingGenerator(DragonflyValGRuntimeRoutingGenerator):
@@ -138,10 +129,10 @@ class DragonflyValNRuntimeRoutingGenerator(DragonflyValGRuntimeRoutingGenerator)
         "local-link hot spots better than VALg."
     )
     vc_policy = {
-        "0": "source group to intermediate router",
-        "1": "intermediate local detour",
-        "2": "intermediate group to destination group",
-        "3": "destination-group delivery",
+        "0": "deterministic minimal escape",
+        "1": "source group to intermediate router",
+        "2": "intermediate local detour",
+        "3": "intermediate group to destination group",
     }
 
 
@@ -165,7 +156,7 @@ class DragonflyPARRuntimeRoutingGenerator(AnyNetRuntimeRoutingGenerator):
     }
 
     def representative_generator(self) -> RoutingGenerator:
-        return DragonflyValiantHashRoutingGenerator(seed=self.seed)
+        return DragonflyMinimalRoutingGenerator()
 
 
 class HypercubeMinAdaptiveRuntimeRoutingGenerator(AnyNetRuntimeRoutingGenerator):
@@ -199,12 +190,12 @@ class HypercubeValiantRuntimeRoutingGenerator(AnyNetRuntimeRoutingGenerator):
         "intermediate node and deterministic shortest routing in each phase."
     )
     vc_policy = {
-        "0": "source to intermediate",
-        "1": "intermediate to destination",
+        "0": "deterministic E-cube escape",
+        "1": "source to intermediate",
     }
 
     def representative_generator(self) -> RoutingGenerator:
-        return HypercubeValiantHashRoutingGenerator(seed=self.seed)
+        return HypercubeECubeRoutingGenerator()
 
 
 class HypercubeUGALLRuntimeRoutingGenerator(HypercubeValiantRuntimeRoutingGenerator):
@@ -267,14 +258,14 @@ class SlimNoCValiantRuntimeRoutingGenerator(AnyNetRuntimeRoutingGenerator):
         "intermediate router."
     )
     vc_policy = {
-        "0": "first hop toward intermediate",
-        "1": "final hop toward intermediate",
-        "2": "first hop from intermediate",
-        "3": "final hop to destination",
+        "0": "deterministic minimal escape",
+        "1": "first hop toward intermediate",
+        "2": "final hop toward intermediate",
+        "3": "first hop from intermediate",
     }
 
     def representative_generator(self) -> RoutingGenerator:
-        return SlimNoCValiantHashRoutingGenerator(seed=self.seed)
+        return SlimNoCMinimalRoutingGenerator()
 
 
 class LLNAdaptiveLayerRuntimeRoutingGenerator(AnyNetRuntimeRoutingGenerator):

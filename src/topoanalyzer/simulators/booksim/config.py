@@ -46,6 +46,7 @@ class BookSimConfigGenerator:
                 system,
                 options,
                 network_file=network_file or "anynet.net",
+                route_table_file=route_table_file,
             )
         return self.generate_anynet_table(
             system,
@@ -108,6 +109,7 @@ class BookSimConfigGenerator:
         options: BookSimOptions,
         *,
         network_file: str | Path,
+        route_table_file: str | Path | None = None,
     ) -> str:
         self.validate_anynet_runtime(system, options)
         runtime = system.routing_table.metadata["booksim_runtime_routing"]
@@ -124,6 +126,11 @@ class BookSimConfigGenerator:
             "topology = anynet;",
             f"routing_function = {routing_function};",
             f"network_file = {_config_path(network_file)};",
+            *(
+                [f"route_table_file = {_config_path(route_table_file)};"]
+                if route_table_file is not None
+                else []
+            ),
             f"anynet_runtime_seed = {int(runtime.get('seed', 0))};",
             f"anynet_runtime_candidates = {int(runtime.get('candidates', 4))};",
             f"anynet_runtime_threshold = {int(runtime.get('adaptive_threshold', 0))};",

@@ -177,11 +177,12 @@ class BookSimTests(unittest.TestCase):
             config = config_path.read_text(encoding="utf-8")
 
             self.assertIn("routing_function = ubmesh_apr;", config)
+            self.assertIn("route_table_file =", config)
             self.assertIn("ubmesh_apr_dimensions = 3,3;", config)
             self.assertIn("ubmesh_apr_seed = 7;", config)
             self.assertTrue((Path(tmpdir) / "anynet.net").exists())
             self.assertTrue((Path(tmpdir) / "anynet_mapping.json").exists())
-            self.assertFalse((Path(tmpdir) / "anynet.routes").exists())
+            self.assertTrue((Path(tmpdir) / "anynet.routes").exists())
 
     def test_runtime_ubmesh_apr_rejects_single_vc(self):
         system = build_system_from_dict(
@@ -234,11 +235,12 @@ class BookSimTests(unittest.TestCase):
             config = config_path.read_text(encoding="utf-8")
 
             self.assertIn("routing_function = dragonfly_ugal_l;", config)
+            self.assertIn("route_table_file =", config)
             self.assertIn("anynet_runtime_seed = 3;", config)
             self.assertIn("anynet_runtime_candidates = 5;", config)
             self.assertIn("anynet_runtime_threshold = 7;", config)
             self.assertTrue((Path(tmpdir) / "anynet.net").exists())
-            self.assertFalse((Path(tmpdir) / "anynet.routes").exists())
+            self.assertTrue((Path(tmpdir) / "anynet.routes").exists())
 
     def test_runtime_dragonfly_par_enforces_required_vcs(self):
         system = build_system_from_dict(

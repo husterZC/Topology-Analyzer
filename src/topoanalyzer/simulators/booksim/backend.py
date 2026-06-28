@@ -42,11 +42,13 @@ class BookSimBackend:
                 route_table_file=artifacts.route_table_file.resolve(),
             )
         elif backend == "anynet_runtime":
-            artifacts = self.anynet_exporter.materialize_network(system, run_dir)
+            _validate_vc_count(system, options)
+            artifacts = self.anynet_exporter.materialize(system, run_dir)
             config = self.config_generator.generate(
                 system,
                 options,
                 network_file=artifacts.network_file.resolve(),
+                route_table_file=artifacts.route_table_file.resolve(),
             )
         else:
             config = self.config_generator.generate(system, options)
