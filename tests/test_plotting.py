@@ -1,5 +1,6 @@
 import unittest
 
+from topoanalyzer.plotting.all2all import _all2all_series
 from topoanalyzer.plotting.latency import (
     _latency_series,
     _x_axis_label,
@@ -8,6 +9,33 @@ from topoanalyzer.plotting.latency import (
 
 
 class LatencyPlotTests(unittest.TestCase):
+    def test_all2all_series_averages_repetitions_by_transfer_size(self):
+        rows = [
+            {
+                "case": "mesh",
+                "system": "mesh_system",
+                "transfer_size": "64",
+                "average_runtime_cycles": "100",
+            },
+            {
+                "case": "mesh",
+                "system": "mesh_system",
+                "transfer_size": "64",
+                "average_runtime_cycles": "140",
+            },
+            {
+                "case": "mesh",
+                "system": "mesh_system",
+                "transfer_size": "128",
+                "average_runtime_cycles": "220",
+            },
+        ]
+
+        points = _all2all_series(rows)["mesh"]
+
+        self.assertEqual([point.transfer_size for point in points], [64.0, 128.0])
+        self.assertEqual([point.runtime_cycles for point in points], [120.0, 220.0])
+
     def test_latency_series_uses_accepted_flit_rate_in_injection_order(self):
         rows = [
             {

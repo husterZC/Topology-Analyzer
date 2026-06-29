@@ -4,6 +4,7 @@ Plot settings appear at the top level of a benchmark YAML file under `plot:`.
 
 ```yaml
 plot:
+  x_scale: linear
   y_scale: log
   y_max: 10000
   emit_companion_plot: true
@@ -44,11 +45,29 @@ With log scale, the primary plot title becomes:
 Latency vs Injection Rate (log scale)
 ```
 
+### `x_scale`
+
+Controls the primary x-axis for `all2all_stress` plots.
+`latency_vs_injection_rate` currently keeps a linear x-axis.
+
+Supported values:
+
+- `linear`
+- `log`
+- `logarithmic`
+
+Default:
+
+```yaml
+plot:
+  x_scale: linear
+```
+
 ### `y_max`
 
-Optional positive number that sets the maximum y-axis limit for latency plots.
-Points above this value are clipped visually, but remain unchanged in the CSV
-and JSON results.
+Optional positive number that sets the maximum y-axis limit for latency or
+runtime plots. Points above this value are clipped visually, but remain
+unchanged in the CSV and JSON results.
 
 ```yaml
 plot:
@@ -94,6 +113,8 @@ emit_companion_plot: true
 ```
 
 ## Axis Labels
+
+### `latency_vs_injection_rate`
 
 The x-axis values are measured injection rates computed from the result CSV:
 
@@ -150,3 +171,33 @@ status == ok
 at least one latency metric, a parseable `accepted_rate`, and a positive
 `packet_size` are plotted. For older CSV files without `packet_size`, the
 plotter uses `1`.
+
+### `all2all_stress`
+
+The all-to-all stress plot reads:
+
+```text
+results/all2all_stress.csv
+```
+
+The x-axis is the configured transfer size per source-destination pair:
+
+```text
+Transfer size per source-destination pair (flits)
+```
+
+or:
+
+```text
+Transfer size per source-destination pair (bytes)
+```
+
+The y-axis is:
+
+```text
+All-to-all runtime (cycles)
+```
+
+Only rows with `status == ok` and a parseable `average_runtime_cycles` are
+plotted. Repetitions of the same transfer size are averaged together before
+drawing line segments.

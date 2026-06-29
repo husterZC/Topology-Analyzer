@@ -123,6 +123,11 @@ Required top-level fields:
 - `benchmark`: benchmark type and default benchmark parameters.
 - `systems`: list of system entries. Each entry can be a string path, a mapping with `path`, or an inline system specification.
 
+Supported benchmark types:
+
+- `latency_vs_injection_rate`: open-loop BookSim latency sweep.
+- `all2all_stress`: finite batch all-to-all transfer-size sweep.
+
 Optional top-level fields:
 
 - `plot`: plot settings.

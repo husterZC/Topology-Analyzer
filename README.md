@@ -109,6 +109,7 @@ make clean-runs
 | Benchmark Type | Output | Description |
 |---|---|---|
 | `latency_vs_injection_rate` | CSV, JSON, metrics.txt, PNG, PDF | Sweeps offered injection rate and plots latency against measured injection rate. |
+| `all2all_stress` | CSV, JSON, metrics.txt, PNG, PDF | Sweeps finite all-to-all transfer size and plots batch runtime. |
 
 Set `benchmark.stop_on_error: true` to abort a sweep after the first failed
 BookSim point. By default, errors are recorded and the sweep continues.
@@ -129,6 +130,8 @@ Example benchmark YAML files:
 | `examples/benchmarks/mesh2d/latency_vs_injection_mesh2d.yaml` | Small 2D mesh sweep. |
 | `examples/benchmarks/mesh2d/latency_vs_injection_mesh2d_scales.yaml` | Multi-scale 2D mesh sweep. |
 | `examples/benchmarks/comparisons/latency_vs_injection_fattree_r8_l4_vs_mesh_16x16.yaml` | Cross-topology comparison. |
+| `examples/benchmarks/all2all/all2all_stress_mesh2d.yaml` | Finite all-to-all transfer-size stress sweep. |
+| `examples/benchmarks/all2all/all2all_stress_fattree_r8_l4_vs_mesh_16x16.yaml` | Fat-tree vs 2D mesh all-to-all stress comparison. |
 
 ## Detailed Docs
 

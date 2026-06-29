@@ -133,6 +133,7 @@ Common BookSim2 traffic strings:
 | Traffic | Description | Notes |
 |---|---|---|
 | `uniform` | Random destination over all terminals. | Safest generic baseline. |
+| `all2all` | Deterministic cyclic all-to-all destination sequence. | Added by Topology-Analyzer's BookSim overlay; used by `all2all_stress`. |
 | `randperm(seed)` | Fixed random one-to-one destination permutation. | Good repeatable permutation baseline. |
 | `hotspot(...)` | Weighted hotspot destination traffic. | Useful for imbalance and contention studies. |
 | `background(...)` | Uniform random traffic excluding selected destinations. | Requires an exclusion list. |
@@ -231,6 +232,139 @@ the BookSim config includes:
 ```text
 injection_rate_uses_flits = 0;
 ```
+
+## `benchmark.type: all2all_stress`
+
+Runs finite BookSim batch simulations for all-to-all traffic. Each source sends
+the requested transfer size to every other terminal. The runner converts a
+transfer size into BookSim `batch_size` as:
+
+```text
+point_packet_size = packet_size                       # fixed_packet_size mode
+point_packet_size = transfer_size_flits              # one_packet_per_pair mode
+packets_per_pair = ceil(transfer_size_flits / point_packet_size)
+batch_size = packets_per_pair * (terminal_count - 1)
+```
+
+The generated BookSim config uses:
+
+```text
+sim_type = batch;
+traffic = all2all;
+batch_size = <packets per source>;
+```
+
+`traffic = all2all` requires Topology-Analyzer's BookSim
+`all2all_traffic.patch`, applied automatically by `make bootstrap`.
+
+The benchmark writes:
+
+```text
+results/all2all_stress.csv
+results/all2all_stress.json
+results/metrics.txt
+plots/all2all_stress.png
+plots/all2all_stress.pdf
+```
+
+Example:
+
+```yaml
+benchmark:
+  type: all2all_stress
+  transfer_sizes:
+    range:
+      start: 64
+      stop: 1024
+      step: 64
+  transfer_size_unit: flits
+  packet_size: 4
+  packetization: fixed_packet_size
+  traffic: all2all
+  injection_rate: 1.0
+  injection_rate_unit: packets/node/cycle
+  batch_count: 1
+  repetitions: 1
+  num_vcs: 2
+  vc_buffer_size: 8
+  timeout_seconds: 120
+```
+
+Field reference:
+
+- `type`: must be `all2all_stress`.
+- `transfer_sizes`: explicit positive integer list or `range(start, stop, step)`. Required.
+- `transfer_size_unit`: `flits` or `bytes`. Optional, default `flits`.
+- `flit_size_bytes`: used only when `transfer_size_unit: bytes`. Optional, default `8`.
+- `packet_size`: packet size in flits. Optional, default `1`.
+- `packetization`: packetization mode. Optional, default `fixed_packet_size`.
+- `traffic`: BookSim traffic pattern. Default and expected value is `all2all`.
+- `injection_rate`: BookSim batch injection probability per source per cycle. Optional, default `1.0`.
+- `injection_rate_unit`: `packets/node/cycle` or `flits/node/cycle`. Optional, default `packets/node/cycle`.
+- `batch_count`: number of finite batches inside one BookSim invocation. Optional, default `1`.
+- `repetitions`: number of external repetitions per transfer size. Optional, default `1`.
+- `num_vcs`, `vc_buffer_size`, `router_latency`, `timeout_seconds`, `stop_on_error`: same meaning as in `latency_vs_injection_rate`.
+
+The CSV includes both requested and actual transfer size in flits. If
+`transfer_size_flits` is not divisible by `packet_size`, the runner rounds up to
+an integer number of packets per source-destination pair.
+
+### Packetization Modes
+
+`fixed_packet_size` keeps BookSim packet size constant while transfer size
+changes:
+
+```yaml
+packet_size: 4
+packetization: fixed_packet_size
+```
+
+For `transfer_size: 64`, each source sends `ceil(64 / 4) = 16` packets to each
+other destination. This mode stresses increasing data volume with fixed packet
+granularity.
+
+`one_packet_per_pair` makes each source-destination transfer one packet:
+
+```yaml
+packetization: one_packet_per_pair
+```
+
+For `transfer_size: 64`, BookSim receives `packet_size = 64` for that sweep
+point and each source sends one packet to each other destination. This mode
+stresses longer packets rather than more packets.
+
+The shorthand below is also accepted and normalizes to
+`one_packet_per_pair`:
+
+```yaml
+packet_size: transfer_size
+```
+
+### Transfer Size Lists And Ranges
+
+Explicit lists:
+
+```yaml
+transfer_sizes: [64, 128, 256]
+```
+
+Stop-exclusive range:
+
+```yaml
+transfer_sizes:
+  range:
+    start: 64
+    stop: 1024
+    step: 64
+```
+
+Compact quoted form:
+
+```yaml
+transfer_sizes: "range(64, 1024, 64)"
+```
+
+Set `inclusive: true` to include an exactly reachable endpoint.
 
 ## `systems` Entries
 

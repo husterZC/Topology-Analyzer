@@ -1,0 +1,31 @@
+benchmark:
+  type: all2all_stress
+  transfer_sizes: [2, 4, 8, 16, 32, 64, 128]
+  transfer_size_unit: flits
+  packet_size: 1
+  packetization: fixed_packet_size
+  traffic: all2all
+  injection_rate: 1.0
+  injection_rate_unit: packets/node/cycle
+  batch_count: 1
+  repetitions: 1
+  num_vcs: 5
+  vc_buffer_size: 8
+  router_latency: 1
+  timeout_seconds: 600
+  stop_on_error: false
+
+plot:
+  x_scale: log
+  y_scale: linear
+  emit_companion_plot: true
+
+systems:
+  - path: ../../systems/fattree/anca/fattree_r8_l4_anca.yaml
+  - path: ../../systems/mesh2d/xy/mesh2d_16x16_xy.yaml
+
+booksim:
+  executable: booksim
+  backend: auto
+
+output_dir: runs

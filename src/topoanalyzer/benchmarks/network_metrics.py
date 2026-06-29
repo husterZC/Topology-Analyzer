@@ -57,16 +57,28 @@ class _FormulaCandidate:
     note: str
 
 
-def write_metrics_text(systems: list[System], path) -> None:
-    path.write_text(metrics_text(systems), encoding="utf-8")
+def write_metrics_text(
+    systems: list[System],
+    path,
+    *,
+    benchmark_type: str = "latency_vs_injection_rate",
+) -> None:
+    path.write_text(
+        metrics_text(systems, benchmark_type=benchmark_type),
+        encoding="utf-8",
+    )
 
 
-def metrics_text(systems: list[System]) -> str:
+def metrics_text(
+    systems: list[System],
+    *,
+    benchmark_type: str = "latency_vs_injection_rate",
+) -> str:
     unique_systems = _unique_systems(systems)
     lines = [
         "# Topology Analyzer Network Metrics",
         "",
-        "benchmark_type: latency_vs_injection_rate",
+        f"benchmark_type: {benchmark_type}",
         "notes:",
         "  nodes: terminal/injection nodes. If terminals are implicit, this uses terminal_count or concentration metadata.",
         "  routers: router nodes in the topology graph.",

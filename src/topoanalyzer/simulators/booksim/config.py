@@ -16,6 +16,10 @@ class BookSimOptions:
     injection_rate: float
     injection_rate_unit: str = "packets/node/cycle"
     packet_size: int = 1
+    sim_type: str = "latency"
+    batch_size: int | None = None
+    batch_count: int = 1
+    max_outstanding_requests: int = 0
     warmup_cycles: int = 10000
     sample_cycles: int = 50000
     max_samples: int = 10
@@ -223,7 +227,8 @@ class BookSimConfigGenerator:
             )
         lines.extend(
             [
-                "sim_type = latency;",
+                f"sim_type = {options.sim_type};",
+                *self._batch_options(options),
                 f"warmup_periods = {options.warmup_cycles};",
                 f"sample_period = {options.sample_cycles};",
                 f"max_samples = {options.max_samples};",
@@ -251,6 +256,17 @@ class BookSimConfigGenerator:
             ]
         )
         return lines
+
+    def _batch_options(self, options: BookSimOptions) -> list[str]:
+        if options.sim_type != "batch":
+            return []
+        if options.batch_size is None:
+            raise ValueError("BookSim batch mode requires batch_size")
+        return [
+            f"batch_size = {options.batch_size};",
+            f"batch_count = {options.batch_count};",
+            f"max_outstanding_requests = {options.max_outstanding_requests};",
+        ]
 
     def validate_supported(self, system: System) -> None:
         if system.topology_type != "mesh2d":

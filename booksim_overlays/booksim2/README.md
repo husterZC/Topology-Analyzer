@@ -20,7 +20,9 @@ Stock BookSim2 supports `anynet` topology files, but its built-in `min_anynet`
 routing function computes shortest paths internally and does not read an
 external route table. Apply `table_anynet.patch` to a BookSim2 checkout to make
 `AnyNet` load the generated route table. Apply `adaptive_anynet.patch` after
-that to add runtime adaptive anynet routing functions.
+that to add runtime adaptive anynet routing functions. Apply
+`all2all_traffic.patch` to add the deterministic `all2all` traffic pattern used
+by the `all2all_stress` benchmark.
 
 The easiest repo-local setup is:
 
@@ -37,6 +39,7 @@ From the root of a BookSim2 checkout:
 ```bash
 patch -p1 < /path/to/Topology-Analyzer/booksim_overlays/booksim2/table_anynet.patch
 patch -p1 < /path/to/Topology-Analyzer/booksim_overlays/booksim2/adaptive_anynet.patch
+patch -p1 < /path/to/Topology-Analyzer/booksim_overlays/booksim2/all2all_traffic.patch
 make -C src
 ```
 
@@ -71,7 +74,8 @@ Current scope:
   `dragonfly_ugal_l`, `dragonfly_valg`, `dragonfly_valn`, `dragonfly_par`,
   `hypercube_min_adaptive`, `hypercube_valiant`, `hypercube_ugal_l`,
   `slimnoc_ugal_l`, `slimnoc_ugal_g`, `slimnoc_valiant`, and
-  `lln_adaptive_layer`.
+  `lln_adaptive_layer`,
+- deterministic `all2all` traffic for finite batch stress tests.
 
 Per-link bandwidth remains metadata in `anynet_mapping.json`; this BookSim2
 channel model does not expose per-edge bandwidth.

@@ -25,7 +25,7 @@ help:
 	@echo "  make booksim-fetch"
 	@echo "                   Clone BookSim2 into external/booksim2 if needed"
 	@echo "  make booksim-apply-overlay"
-	@echo "                   Apply Topology-Analyzer's anynet route-table and adaptive overlays"
+	@echo "                   Apply Topology-Analyzer's anynet and traffic overlays"
 	@echo "  make booksim-build"
 	@echo "                   Build BookSim after applying the overlay"
 	@echo "  make booksim-link"
@@ -92,6 +92,11 @@ booksim-apply-overlay: booksim-fetch
 		echo "BookSim anynet adaptive-runtime overlay already applied"; \
 	else \
 		patch -p1 -d "$(BOOKSIM_DIR)" < booksim_overlays/booksim2/adaptive_anynet.patch; \
+	fi
+	@if grep -q "AllToAllTrafficPattern" "$(BOOKSIM_DIR)/src/traffic.hpp"; then \
+		echo "BookSim all2all traffic overlay already applied"; \
+	else \
+		patch -p1 -d "$(BOOKSIM_DIR)" < booksim_overlays/booksim2/all2all_traffic.patch; \
 	fi
 
 booksim-build: booksim-apply-overlay

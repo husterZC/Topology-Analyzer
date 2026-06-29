@@ -5,6 +5,12 @@ import json
 from pathlib import Path
 from typing import Any
 
+from topoanalyzer.benchmarks.all2all_stress import (
+    All2AllBenchmarkCase,
+    All2AllStressBenchmark,
+    All2AllStressPlotSettings,
+    All2AllStressRunner,
+)
 from topoanalyzer.benchmarks.latency_vs_injection import (
     BenchmarkCase,
     LatencyInjectionBenchmark,
@@ -98,14 +104,32 @@ def _cmd_benchmark(
     booksim_executable: str | None,
 ) -> int:
     spec = load_document(benchmark_file)
-    benchmark = LatencyInjectionBenchmark.from_dict(spec["benchmark"])
-    cases = _load_benchmark_cases(spec, benchmark_file.parent, benchmark)
-    plot_settings = LatencyInjectionPlotSettings.from_dict(spec.get("plot"))
     booksim_spec = spec.get("booksim", {})
     executable = booksim_executable or str(booksim_spec.get("executable", "booksim"))
     backend_name = str(booksim_spec.get("backend", "anynet_table"))
     backend = BookSimBackend(executable=executable, backend=backend_name)
     output_root = Path(spec.get("output_dir", "runs"))
+    benchmark_type = str(spec["benchmark"].get("type", "latency_vs_injection_rate"))
+    if benchmark_type == "all2all_stress":
+        benchmark = All2AllStressBenchmark.from_dict(spec["benchmark"])
+        cases = _load_all2all_benchmark_cases(spec, benchmark_file.parent, benchmark)
+        plot_settings = All2AllStressPlotSettings.from_dict(spec.get("plot"))
+        runner = All2AllStressRunner(backend)
+        output_dir = runner.run(
+            cases,
+            benchmark,
+            output_root,
+            dry_run=dry_run,
+            progress=progress,
+            run_name=run_name,
+            plot_settings=plot_settings,
+        )
+        print(output_dir)
+        return 0
+
+    benchmark = LatencyInjectionBenchmark.from_dict(spec["benchmark"])
+    cases = _load_benchmark_cases(spec, benchmark_file.parent, benchmark)
+    plot_settings = LatencyInjectionPlotSettings.from_dict(spec.get("plot"))
     runner = LatencyInjectionRunner(backend)
     output_dir = runner.run(
         cases,
@@ -146,6 +170,33 @@ def _load_benchmark_cases(
                 item.get("benchmark") or item.get("settings") or item.get("parameters")
             )
             cases.append(BenchmarkCase(case_name, system, case_benchmark))
+        else:
+            raise ValueError(f"invalid system entry: {item!r}")
+    return cases
+
+
+def _load_all2all_benchmark_cases(
+    spec: dict[str, Any],
+    base_dir: Path,
+    benchmark: All2AllStressBenchmark,
+) -> list[All2AllBenchmarkCase]:
+    cases: list[All2AllBenchmarkCase] = []
+    for item in spec["systems"]:
+        if isinstance(item, str):
+            system = _load_system(base_dir / item)
+            cases.append(All2AllBenchmarkCase(system.name, system, benchmark))
+        elif isinstance(item, dict):
+            system = _load_system_from_benchmark_entry(item, base_dir)
+            case_name = str(
+                item.get("case")
+                or item.get("case_name")
+                or item.get("label")
+                or system.name
+            )
+            case_benchmark = benchmark.with_overrides(
+                item.get("benchmark") or item.get("settings") or item.get("parameters")
+            )
+            cases.append(All2AllBenchmarkCase(case_name, system, case_benchmark))
         else:
             raise ValueError(f"invalid system entry: {item!r}")
     return cases

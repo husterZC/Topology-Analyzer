@@ -56,6 +56,28 @@ class BookSimTests(unittest.TestCase):
         self.assertIn("packet_size = 5;", config)
         self.assertIn("injection_rate_uses_flits = 1;", config)
 
+    def test_generates_batch_config(self):
+        config = BookSimConfigGenerator().generate(
+            _system(),
+            BookSimOptions(
+                traffic="all2all",
+                injection_rate=1.0,
+                packet_size=4,
+                sim_type="batch",
+                batch_size=12,
+                batch_count=2,
+                max_outstanding_requests=8,
+            ),
+            network_file="/tmp/anynet.net",
+            route_table_file="/tmp/anynet.routes",
+        )
+
+        self.assertIn("traffic = all2all;", config)
+        self.assertIn("sim_type = batch;", config)
+        self.assertIn("batch_size = 12;", config)
+        self.assertIn("batch_count = 2;", config)
+        self.assertIn("max_outstanding_requests = 8;", config)
+
     def test_generates_stock_mesh_config_when_requested(self):
         config = BookSimConfigGenerator(backend="stock_mesh").generate(
             _system(),
@@ -299,6 +321,19 @@ class BookSimTests(unittest.TestCase):
         self.assertEqual(metrics.average_packet_latency, 16.9213)
         self.assertEqual(metrics.average_network_latency, 16.7953)
         self.assertEqual(metrics.accepted_rate, 0.0100319)
+
+    def test_parses_booksim_batch_duration_labels(self):
+        metrics = parse_booksim_output(
+            """
+            Minimum batch duration = 101
+            Average batch duration = 123.5
+            Maximum batch duration = 150
+            """
+        )
+
+        self.assertEqual(metrics.min_batch_duration, 101.0)
+        self.assertEqual(metrics.average_batch_duration, 123.5)
+        self.assertEqual(metrics.max_batch_duration, 150.0)
 
 
 if __name__ == "__main__":
