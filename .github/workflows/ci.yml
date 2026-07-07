@@ -68,6 +68,12 @@ jobs:
             examples/benchmarks/system_regression/latency_vs_injection_booksim_smoke.yaml \
             --no-progress
 
+      - name: Check full-root Fat-tree booksim
+        run: |
+          topoanalyzer benchmark \
+            examples/benchmarks/system_regression/latency_vs_injection_fattree_fullroot_booksim_smoke.yaml \
+            --no-progress
+
       - name: Check adaptive runtime booksim
         run: |
           topoanalyzer benchmark \

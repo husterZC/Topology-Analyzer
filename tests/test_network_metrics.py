@@ -78,6 +78,21 @@ class NetworkMetricsTests(unittest.TestCase):
         )
         self.assertEqual(metrics.bisection_partition_sizes, (128, 128))
 
+    def test_fullroot_fattree_metrics_use_doubled_terminal_count(self):
+        metrics = summarize_system(
+            _system(
+                "fattree",
+                {"radix": 4, "levels": 3, "root_mode": "full"},
+                "fattree_lca",
+            )
+        )
+
+        self.assertEqual(metrics.nodes, 16)
+        self.assertEqual(metrics.routers, 20)
+        self.assertEqual(metrics.links, 64)
+        self.assertEqual(metrics.max_router_radix, 4)
+        self.assertEqual(metrics.diameter, 4)
+
     def test_large_slimnoc_uses_group_level_estimate(self):
         metrics = summarize_system(
             _system(

@@ -307,12 +307,21 @@ class BookSimConfigGenerator:
                 "stock_fattree backend currently represents true adaptive ANCA only; "
                 f"routing table {system.routing_table.name!r} should use anynet_table"
             )
+        params = system.topology_params
+        if str(params.get("root_mode", "half")).strip().lower().replace("-", "_") in {
+            "full",
+            "full_root",
+            "fullroot",
+        }:
+            raise BookSimUnsupportedError(
+                "stock_fattree models BookSim's half-root Fat-tree only; "
+                "full-root Fat-tree systems require booksim.backend: auto or anynet_table"
+            )
         runtime = system.routing_table.metadata.get("booksim_runtime_routing")
         if not isinstance(runtime, dict) or runtime.get("routing_function") != "anca":
             raise BookSimUnsupportedError(
                 "stock_fattree backend requires fattree_anca runtime routing metadata"
             )
-        params = system.topology_params
         if int(params["radix"]) % 2 != 0:
             raise BookSimUnsupportedError("stock_fattree requires even fattree radix")
         channel_latency = _single_value(

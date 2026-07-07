@@ -56,7 +56,8 @@ These formulas describe the graph models implemented in this repository.
 | `slimnoc` | `q`, `p` | `2*q^2` | `2*q^2*p` |
 | `ubmesh` | `dimensions=[L_i]`, `c` | `prod_i L_i` | `c*prod_i L_i` |
 | `lln` | `x`, `y`, `T`, `c` | `x*y*T` | `c*x*y*T` |
-| `fattree` | `radix=r`, `levels=L`, `s=r/2` | `L*s^(L-1)` | `s^L` |
+| `fattree` half-root | `radix=r`, `levels=L`, `s=r/2`, `root_mode=half` | `L*s^(L-1)` | `s^L` |
+| `fattree` full-root | `radix=r`, `levels=L`, `s=r/2`, `root_mode=full` | `(2*L-1)*s^(L-1)` | `2*s^L` |
 
 For topologies with explicit dimensions, the implementation has no fixed
 mathematical maximum beyond memory/runtime limits and validation constraints.
@@ -80,7 +81,7 @@ benchmark `metrics.txt`.
 | `slimnoc` | `p + (3*q-delta)/2` |
 | `ubmesh` | `c + sum_i (L_i-1)` |
 | `lln` | `c + (T-1) + max(d_core, d_long_max)` |
-| `fattree` | `r` |
+| `fattree` half-root or full-root | `r` |
 
 For non-wrap `ruche3d`, `A in {x,y,z}`, `L_A` is the axis length, `s_A` is the
 axis stride, and `r_A` is the maximum ruche-link degree in that axis:
@@ -112,7 +113,7 @@ algorithm. The placement enforces `d_long_max <= horizontal_ports`.
 | `ubmesh` | `count_i(L_i > 1)` |
 | `lln` full coverage | `3` |
 | `lln` partial coverage | `<= (x-1)+(y-1)+2` |
-| `fattree` | `2*(L-1)` between leaf routers |
+| `fattree` half-root or full-root | `2*(L-1)` between leaf routers |
 
 For `ruche3d`, `L_A` is the dimension length and `s_A` is the ruche stride in
 axis `A`. Wrap-ruche diameter depends on the wrap routing policy; the current
@@ -703,24 +704,32 @@ topology:
   params:
     radix: 8
     levels: 4
+    root_mode: half
 ```
 
 Parameters:
 
 - `radix`: router radix. Required, even integer greater than `1`.
 - `levels`: number of switch/router levels. Required, integer at least `2`.
+- `root_mode`: optional. `half` keeps the BookSim-style canonical root stage,
+  where root routers use only `radix/2` down ports. `full` builds a full-root
+  variant where root routers use all `radix` down ports.
 
 The builder uses `split = radix / 2`. For `radix: 8`, `split = 4`.
 
 This is a radix-split folded Fat-tree / k-ary n-tree model, not a literal
-single-root tree with fewer switches at each higher level. Each level contains
-`routers_per_level` routers. The top level is a set of root-level routers, and
-terminal nodes attach only to level-`0` leaf routers.
+single-root tree with fewer switches at each higher level. The top level is a
+set of root-level routers, and terminal nodes attach only to level-`0` leaf
+routers. In half-root mode each level contains the same number of routers; in
+full-root mode each non-root level has two planes and the root stage is shared
+by both planes.
 
 When using BookSim's native `fattree` backend, BookSim's `k` field maps to this
-repo's `split`, not to this repo's total router `radix`.
+repo's `split`, not to this repo's total router `radix`. Native BookSim
+`fattree` models the half-root shape only. Full-root systems use the custom
+table-driven `anynet` backend.
 
-Generated size:
+Generated half-root size:
 
 ```text
 terminal_count = split ^ levels
@@ -728,10 +737,25 @@ routers_per_level = split ^ (levels - 1)
 router_count = levels * routers_per_level
 ```
 
+Generated full-root size:
+
+```text
+terminal_count = 2 * split ^ levels
+root_routers_per_level = split ^ (levels - 1)
+non_root_routers_per_level = 2 * split ^ (levels - 1)
+router_count = (2*levels - 1) * split ^ (levels - 1)
+```
+
+The full-root construction duplicates every non-root level into two planes and
+merges both planes into the same root stage. Every leaf and intermediate router
+still uses at most `radix` ports, and each root router has `radix` down links.
+
 Router IDs:
 
 ```text
-ft.l<level>.<coord...>
+half-root: ft.l<level>.<coord...>
+full-root non-root: ft.p<plane>.l<level>.<coord...>
+full-root root: ft.l<level>.<coord...>
 ```
 
 Level `0` routers are leaf routers. Terminals attach only to leaf routers; the

@@ -49,6 +49,24 @@ def _fattree_routing_system(routing):
     )
 
 
+def _fullroot_fattree_routing_system(routing, radix=4, levels=3):
+    return build_system_from_dict(
+        {
+            "name": f"fattree_fullroot_r{radix}_l{levels}_{routing['type']}",
+            "topology": {
+                "type": "fattree",
+                "params": {
+                    "radix": radix,
+                    "levels": levels,
+                    "root_mode": "full",
+                },
+            },
+            "links": {"default": {"latency_cycles": 1, "bandwidth": "64GB/s"}},
+            "routing": routing,
+        }
+    )
+
+
 class FatTreeTests(unittest.TestCase):
     def test_builds_level4_radix8_fattree(self):
         graph = FatTreeTopologyBuilder().build(
@@ -60,6 +78,35 @@ class FatTreeTests(unittest.TestCase):
         self.assertEqual(graph.metadata["terminal_count"], 256)
         self.assertEqual(len(graph.metadata["terminal_attachments"]), 64)
         self.assertEqual(len(graph.links), 1536)
+
+    def test_builds_fullroot_fattree_with_full_radix_roots(self):
+        graph = FatTreeTopologyBuilder().build(
+            FatTreeParams(radix=8, levels=4, root_mode="full"),
+            _links(),
+        )
+        router_out_degree = {
+            node.id: sum(1 for link in graph.links if link.src == node.id)
+            for node in graph.routers()
+        }
+        root_ids = [
+            node.id
+            for node in graph.routers()
+            if node.metadata["role"] == "root"
+        ]
+        leaf_ids = [
+            node.id
+            for node in graph.routers()
+            if node.metadata["role"] == "leaf"
+        ]
+
+        self.assertEqual(len(graph.routers()), 448)
+        self.assertEqual(len(root_ids), 64)
+        self.assertEqual(len(leaf_ids), 128)
+        self.assertEqual(graph.metadata["terminal_count"], 512)
+        self.assertEqual(len(graph.metadata["terminal_attachments"]), 128)
+        self.assertEqual(len(graph.links), 3072)
+        self.assertEqual({router_out_degree[root] for root in root_ids}, {8})
+        self.assertEqual({router_out_degree[leaf] for leaf in leaf_ids}, {4})
 
     def test_fattree_lca_routes_up_then_down(self):
         system = _fattree_system()
@@ -196,6 +243,47 @@ class FatTreeTests(unittest.TestCase):
                 self.assertGreaterEqual(up_used, 704)
                 self.assertGreaterEqual(down_used, 384)
 
+    def test_fullroot_fattree_routing_modes_validate(self):
+        for routing_type in (
+            "fattree_lca",
+            "fattree_nca_hash",
+            "fattree_dmodk",
+            "fattree_dmodc",
+            "fattree_anca",
+        ):
+            with self.subTest(routing_type=routing_type):
+                system = _fullroot_fattree_routing_system({"type": routing_type})
+
+                self.assertTrue(system.validate().ok)
+                self.assertEqual(system.graph.metadata["terminal_count"], 16)
+                self.assertEqual(system.graph.metadata["root_mode"], "full")
+
+    def test_fullroot_terminal_routes_cross_planes_through_root(self):
+        system = _fullroot_fattree_routing_system(
+            {"type": "fattree_nca_hash", "seed": 0}
+        )
+        terminal_routes = system.routing_table.metadata["terminal_next_hops"]
+        destination_terminal = next(
+            terminal_id
+            for terminal_id, router_id in _terminal_list(system)
+            if router_id.startswith("ft.p1.")
+        )
+        current = "ft.p0.l0.0.0"
+        destination = "ft.p1.l0.0.0"
+        levels = []
+        planes = []
+        while current != destination:
+            levels.append(system.graph.nodes[current].metadata["level"])
+            planes.append(system.graph.nodes[current].metadata.get("plane"))
+            current = terminal_routes[current][str(destination_terminal)]["next_hop"]
+        levels.append(system.graph.nodes[current].metadata["level"])
+        planes.append(system.graph.nodes[current].metadata.get("plane"))
+
+        self.assertIn(2, levels)
+        self.assertIn(None, planes)
+        self.assertEqual(planes[0], 0)
+        self.assertEqual(planes[-1], 1)
+
     def test_fattree_dmodc_avoids_disabled_up_link(self):
         disabled = "ft.l0.0.0.0->ft.l1.0.0.0"
         system = _fattree_routing_system(
@@ -240,16 +328,34 @@ class FatTreeTests(unittest.TestCase):
                 BookSimOptions(traffic="uniform", injection_rate=0.01),
             )
 
+    def test_fullroot_fattree_anca_uses_anynet_table_backend(self):
+        system = _fullroot_fattree_routing_system({"type": "fattree_anca"})
+
+        config = BookSimConfigGenerator(backend="auto").generate(
+            system,
+            BookSimOptions(traffic="uniform", injection_rate=0.01),
+            network_file="anynet.net",
+            route_table_file="anynet.routes",
+        )
+
+        self.assertNotIn("booksim_runtime_routing", system.routing_table.metadata)
+        self.assertIn("topology = anynet;", config)
+        self.assertIn("route_table_file = anynet.routes;", config)
+
+    def test_fullroot_fattree_rejects_stock_backend(self):
+        system = _fullroot_fattree_routing_system({"type": "fattree_anca"})
+
+        with self.assertRaisesRegex(ValueError, "full-root Fat-tree"):
+            BookSimConfigGenerator(backend="stock_fattree").generate(
+                system,
+                BookSimOptions(traffic="uniform", injection_rate=0.01),
+            )
+
 
 def _terminal_route_usage(system):
     terminal_routes = system.routing_table.metadata["terminal_next_hops"]
     attachments = system.graph.metadata["terminal_attachments"]
-    terminals: list[tuple[int, str]] = []
-    terminal_id = 0
-    for attachment in attachments:
-        for _ in range(int(attachment["count"])):
-            terminals.append((terminal_id, attachment["router_id"]))
-            terminal_id += 1
+    terminals = _terminal_list(system)
 
     roots: dict[str, int] = {}
     edges: set[tuple[str, str]] = set()
@@ -281,6 +387,17 @@ def _terminal_route_usage(system):
         sum(1 for link in up_links if link in edges),
         sum(1 for link in down_links if link in edges),
     )
+
+
+def _terminal_list(system):
+    attachments = system.graph.metadata["terminal_attachments"]
+    terminals: list[tuple[int, str]] = []
+    terminal_id = 0
+    for attachment in attachments:
+        for _ in range(int(attachment["count"])):
+            terminals.append((terminal_id, attachment["router_id"]))
+            terminal_id += 1
+    return terminals
 
 
 if __name__ == "__main__":

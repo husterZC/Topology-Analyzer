@@ -69,7 +69,7 @@ make clean-runs
 | SlimNoC | `slimnoc` | `q`, `concentration` | MMS/SlimFly-style diameter-2 graph. |
 | UBMesh | `ubmesh` | `dimensions`, `dimension_names`, `concentration` | nD-FullMesh core from the UBMesh paper. |
 | LLN | `lln` | `x`, `y`, `layers`, `vertical_pillars`, `concentration` | 3D low-radix long-link network from Xu et al. |
-| Fat-tree | `fattree` | `radix`, `levels` | Regular radix-split Fat-tree. |
+| Fat-tree | `fattree` | `radix`, `levels`, `root_mode` | Regular radix-split Fat-tree; `root_mode: full` enables the full-root variant. |
 
 ## Supported Routing Algorithms
 
@@ -100,7 +100,7 @@ make clean-runs
 | `fattree_nca_hash` | `fattree` | Balanced static ECMP-style NCA routing. |
 | `fattree_dmodk` | `fattree` | Deterministic D-mod-k-style routing. |
 | `fattree_dmodc` | `fattree` | Fault-aware Dmodc-style routing. |
-| `fattree_anca` | `fattree` | BookSim runtime adaptive ANCA routing. |
+| `fattree_anca` | `fattree` | BookSim runtime adaptive ANCA for canonical Fat-tree; table-driven representative routes for full-root. |
 | `graph_updown` | most connected graphs | Generic up*/down* routing. |
 | `graph_lash` | most connected graphs | Generic short-path routing with VC assignment. |
 

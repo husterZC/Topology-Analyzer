@@ -15,6 +15,7 @@ class TerminalDestination:
     router_id: str
     local_index: int
     leaf_coord: tuple[int, ...]
+    plane: int | None = None
 
 
 UpSelector = Callable[
@@ -149,7 +150,10 @@ def terminal_destinations(graph: TopologyGraph) -> list[TerminalDestination]:
         count = int(attachment.get("count", 0))
         if count <= 0 or router_id not in graph.nodes:
             continue
-        leaf_coord = tuple(int(value) for value in graph.nodes[router_id].metadata["coord"])
+        leaf_node = graph.nodes[router_id]
+        leaf_coord = tuple(int(value) for value in leaf_node.metadata["coord"])
+        raw_plane = leaf_node.metadata.get("plane")
+        plane = int(raw_plane) if raw_plane is not None else None
         for local_index in range(count):
             terminals.append(
                 TerminalDestination(
@@ -157,6 +161,7 @@ def terminal_destinations(graph: TopologyGraph) -> list[TerminalDestination]:
                     router_id=router_id,
                     local_index=local_index,
                     leaf_coord=leaf_coord,
+                    plane=plane,
                 )
             )
             next_terminal += 1
@@ -219,7 +224,7 @@ def path_to_terminal(
     seen = {current}
     while current != terminal.router_id:
         next_hop = None
-        if covers_leaf(graph, current, terminal.leaf_coord):
+        if covers_leaf(graph, current, terminal):
             next_hop = down_neighbor(graph, current, terminal, down_adjacency)
         if next_hop is None:
             next_hop = up_selector(
@@ -243,16 +248,20 @@ def path_to_terminal(
 def covers_leaf(
     graph: TopologyGraph,
     router_id: str,
-    leaf_coord: tuple[int, ...],
+    terminal: TerminalDestination,
 ) -> bool:
     node = graph.nodes[router_id]
+    raw_plane = node.metadata.get("plane")
+    if raw_plane is not None and terminal.plane is not None:
+        if int(raw_plane) != terminal.plane:
+            return False
     level = int(node.metadata["level"])
     levels = int(graph.metadata["levels"])
     fixed_digits = {
         int(key): int(value) for key, value in node.metadata["fixed_digits"].items()
     }
     for digit_position in range(level + 1, levels):
-        if fixed_digits[digit_position] != leaf_coord[digit_position - 1]:
+        if fixed_digits[digit_position] != terminal.leaf_coord[digit_position - 1]:
             return False
     return True
 
@@ -266,7 +275,7 @@ def down_neighbor(
     candidates = [
         neighbor
         for neighbor in down_adjacency[current]
-        if covers_leaf(graph, neighbor, terminal.leaf_coord)
+        if covers_leaf(graph, neighbor, terminal)
     ]
     if not candidates:
         return None

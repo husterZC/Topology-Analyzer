@@ -20,22 +20,35 @@ class FatTreeANCARoutingGenerator(RoutingGenerator):
     def generate(self, graph: TopologyGraph) -> RoutingTable:
         report = self.validate(graph)
         report.raise_if_errors()
+        metadata = {
+            "algorithm": "booksim_runtime_anca",
+            "description": (
+                "Marker routing table for BookSim native adaptive nearest "
+                "common ancestor Fat-tree routing. The static paths validate "
+                "the topology but are not used by the stock_fattree backend."
+            ),
+        }
+        if graph.metadata.get("root_mode") == "full":
+            metadata = {
+                "algorithm": "nearest_common_ancestor_anca_representative",
+                "description": (
+                    "Full-root Fat-tree representative ANCA/NCA routes. "
+                    "BookSim's native Fat-tree backend models the half-root "
+                    "shape, so full-root systems use the table-driven anynet "
+                    "backend."
+                ),
+                "booksim_backend": "anynet_table",
+            }
+        else:
+            metadata["booksim_runtime_routing"] = {
+                "backend": "stock_fattree",
+                "topology": "fattree",
+                "routing_function": "anca",
+            }
         table = generate_terminal_aware_nca_table(
             graph,
             routing_name=self.name,
-            metadata={
-                "algorithm": "booksim_runtime_anca",
-                "description": (
-                    "Marker routing table for BookSim native adaptive nearest "
-                    "common ancestor Fat-tree routing. The static paths validate "
-                    "the topology but are not used by the stock_fattree backend."
-                ),
-                "booksim_runtime_routing": {
-                    "backend": "stock_fattree",
-                    "topology": "fattree",
-                    "routing_function": "anca",
-                },
-            },
+            metadata=metadata,
             up_selector=self._select_up_neighbor,
         )
         return table

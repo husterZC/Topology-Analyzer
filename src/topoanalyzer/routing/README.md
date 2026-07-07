@@ -591,8 +591,9 @@ routing:
   type: fattree_anca
 ```
 
-This routing type validates the Topology-Analyzer Fat-tree system but is not
-lowered through `anynet.routes`. Use:
+For canonical `root_mode: half` Fat-trees, this routing type validates the
+Topology-Analyzer Fat-tree system but is not lowered through `anynet.routes`.
+Use:
 
 ```yaml
 booksim:
@@ -607,6 +608,10 @@ k = radix / 2;
 n = levels;
 routing_function = anca;
 ```
+
+For `topology.params.root_mode: full`, native BookSim `fattree` cannot represent
+the graph shape. In that case `fattree_anca` emits representative NCA/ANCA
+routes and `booksim.backend: auto` selects the table-driven `anynet` backend.
 
 </details>
 

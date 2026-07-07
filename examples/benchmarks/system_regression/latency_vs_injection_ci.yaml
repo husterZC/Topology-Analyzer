@@ -26,6 +26,11 @@ systems:
   - ../../systems/fattree/dmodk/fattree_r8_l4_dmodk.yaml
   - ../../systems/fattree/lca/fattree_r8_l4_lca.yaml
   - ../../systems/fattree/nca_hash/fattree_r8_l4_nca_hash.yaml
+  - ../../systems/fattree/fullroot/anca/fattree_fullroot_r4_l3_anca.yaml
+  - ../../systems/fattree/fullroot/dmodc/fattree_fullroot_r4_l3_dmodc.yaml
+  - ../../systems/fattree/fullroot/dmodk/fattree_fullroot_r4_l3_dmodk.yaml
+  - ../../systems/fattree/fullroot/lca/fattree_fullroot_r4_l3_lca.yaml
+  - ../../systems/fattree/fullroot/nca_hash/fattree_fullroot_r4_l3_nca_hash.yaml
   - ../../systems/hypercube/ecube/hypercube_d4_ecube.yaml
   - ../../systems/hypercube/lash/hypercube_d4_lash.yaml
   - ../../systems/hypercube/min_adaptive_runtime/hypercube_d4_min_adaptive_runtime.yaml

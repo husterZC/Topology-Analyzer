@@ -1,0 +1,32 @@
+benchmark:
+  type: latency_vs_injection_rate
+  injection_rates: [0.001]
+  injection_rate_unit: flits/node/cycle
+  packet_size: 1
+  traffic: uniform
+  warmup_cycles: 50
+  sample_cycles: 200
+  max_samples: 1
+  repetitions: 1
+  num_vcs: 4
+  vc_buffer_size: 4
+  router_latency: 1
+  timeout_seconds: 120
+  stop_on_error: true
+
+systems:
+  - ../../systems/fattree/fullroot/anca/fattree_fullroot_r4_l3_anca.yaml
+  - ../../systems/fattree/fullroot/dmodc/fattree_fullroot_r4_l3_dmodc.yaml
+  - ../../systems/fattree/fullroot/dmodk/fattree_fullroot_r4_l3_dmodk.yaml
+  - ../../systems/fattree/fullroot/lca/fattree_fullroot_r4_l3_lca.yaml
+  - ../../systems/fattree/fullroot/nca_hash/fattree_fullroot_r4_l3_nca_hash.yaml
+
+booksim:
+  executable: booksim
+  backend: auto
+
+plot:
+  y_scale: log
+  emit_companion_plot: false
+
+output_dir: runs/system_regression

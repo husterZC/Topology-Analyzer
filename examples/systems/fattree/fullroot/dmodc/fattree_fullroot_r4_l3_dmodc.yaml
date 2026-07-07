@@ -1,0 +1,16 @@
+name: fattree_fullroot_r4_l3_dmodc
+
+topology:
+  type: fattree
+  params:
+    radix: 4
+    levels: 3
+    root_mode: full
+
+links:
+  default:
+    latency_cycles: 1
+    bandwidth: 64GB/s
+
+routing:
+  type: fattree_dmodc

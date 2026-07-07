@@ -17,6 +17,7 @@ examples/
       anca/          Fat-tree systems using BookSim runtime adaptive ANCA
       dmodc/         Fat-tree systems with Dmodc-style fault-aware modulo routing
       dmodk/         Fat-tree systems with deterministic D-mod-k routing
+      fullroot/      Full-root Fat-tree variants for all Fat-tree routing modes
       lca/           Fat-tree systems with topology-specific LCA routing
       nca_hash/      Fat-tree systems with balanced static NCA hash routing
     hypercube/
@@ -64,6 +65,7 @@ topoanalyzer validate examples/systems/fattree/nca_hash/fattree_r8_l4_nca_hash.y
 topoanalyzer validate examples/systems/fattree/dmodk/fattree_r8_l4_dmodk.yaml
 topoanalyzer validate examples/systems/fattree/dmodc/fattree_r8_l4_dmodc.yaml
 topoanalyzer validate examples/systems/fattree/anca/fattree_r8_l4_anca.yaml
+topoanalyzer validate examples/systems/fattree/fullroot/nca_hash/fattree_fullroot_r4_l3_nca_hash.yaml
 topoanalyzer validate examples/systems/mesh3d/xyz/mesh3d_4x4x2_xyz.yaml
 topoanalyzer validate examples/systems/lln/table/lln_4x4x5_table.yaml
 topoanalyzer validate examples/systems/lln/dor_fallback/lln_4x4x4_dor_fallback.yaml
@@ -93,5 +95,6 @@ topoanalyzer benchmark examples/benchmarks/mesh2d/latency_vs_injection_mesh2d_sc
 topoanalyzer benchmark examples/benchmarks/comparisons/latency_vs_injection_fattree_r8_l4_vs_mesh_16x16.yaml --dry-run
 topoanalyzer benchmark examples/benchmarks/all2all/all2all_stress_mesh2d.yaml --dry-run
 topoanalyzer benchmark examples/benchmarks/system_regression/latency_vs_injection_booksim_smoke.yaml --no-progress
+topoanalyzer benchmark examples/benchmarks/system_regression/latency_vs_injection_fattree_fullroot_booksim_smoke.yaml --no-progress
 topoanalyzer view examples/systems/slimnoc/figure7b/slimnoc_figure7b_snl_q9_p8_min.yaml --output-dir views/slimnoc_figure7b_snl_q9_p8
 ```

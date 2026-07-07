@@ -49,6 +49,20 @@ Runtime anynet algorithms are kept in a separate smoke file so the CI smoke can
 stay representative and short. Use the dedicated adaptive smoke below to
 exercise those runtime routing functions.
 
+## Full-Root Fat-Tree BookSim Smoke
+
+Run the full-root Fat-tree smoke:
+
+```sh
+topoanalyzer benchmark examples/benchmarks/system_regression/latency_vs_injection_fattree_fullroot_booksim_smoke.yaml --no-progress
+```
+
+This file runs one low-rate point over `root_mode: full` Fat-tree systems using
+all Fat-tree routing modes: `fattree_lca`, `fattree_nca_hash`, `fattree_dmodk`,
+`fattree_dmodc`, and `fattree_anca`. Full-root `fattree_anca` uses
+`anynet_table` under `booksim.backend: auto`, because native BookSim Fat-tree
+models the half-root shape.
+
 ## Adaptive Runtime BookSim Smoke
 
 Run the real-simulator adaptive runtime smoke:

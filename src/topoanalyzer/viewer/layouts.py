@@ -290,6 +290,10 @@ class FatTreeLayout(LayoutStrategy):
         row_count = ceil(routers_per_level / columns)
         x = (index % columns - (columns - 1) / 2.0) * 1.0
         z = (index // columns - (row_count - 1) / 2.0) * 1.0
+        if "plane" in node.metadata:
+            plane_count = max(1, int(graph.metadata.get("plane_count", 1)))
+            plane = int(node.metadata["plane"])
+            x += (plane - (plane_count - 1) / 2.0) * max(1.25, columns * 0.45)
         return (x, level * 1.25, z)
 
     def node_style(self, node: Node, graph: TopologyGraph) -> NodeStyle:

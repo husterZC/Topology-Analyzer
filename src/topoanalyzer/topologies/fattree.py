@@ -14,23 +14,38 @@ from topoanalyzer.topologies.base import TopologyBuilder
 class FatTreeParams:
     radix: int
     levels: int
+    root_mode: str = "half"
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "FatTreeParams":
         return cls(
             radix=int(data["radix"]),
             levels=int(data["levels"]),
+            root_mode=str(data.get("root_mode", "half")),
         )
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "radix": self.radix,
             "levels": self.levels,
+            "root_mode": self.root_mode,
         }
 
     @property
     def split(self) -> int:
         return self.radix // 2
+
+    @property
+    def normalized_root_mode(self) -> str:
+        return self.root_mode.strip().lower().replace("-", "_")
+
+    @property
+    def is_full_root(self) -> bool:
+        return self.normalized_root_mode in {"full", "full_root", "fullroot"}
+
+    @property
+    def plane_count(self) -> int:
+        return 2 if self.is_full_root else 1
 
 
 class FatTreeTopologyBuilder(TopologyBuilder):
@@ -44,6 +59,17 @@ class FatTreeTopologyBuilder(TopologyBuilder):
             report.add_error("fattree radix must be even", radix=params.radix)
         if params.levels < 2:
             report.add_error("fattree levels must be at least 2", levels=params.levels)
+        if params.normalized_root_mode not in {
+            "half",
+            "canonical",
+            "full",
+            "full_root",
+            "fullroot",
+        }:
+            report.add_error(
+                "fattree root_mode must be 'half' or 'full'",
+                root_mode=params.root_mode,
+            )
 
         allowed_classes = {"up", "down"}
         for level in range(max(params.levels - 1, 0)):
@@ -65,39 +91,65 @@ class FatTreeTopologyBuilder(TopologyBuilder):
         report.raise_if_errors()
 
         split = params.split
-        routers_per_level = split ** (params.levels - 1)
-        terminal_count = split ** params.levels
+        coordinate_width = params.levels - 1
+        root_routers_per_level = split**coordinate_width
+        non_root_routers_per_level = params.plane_count * root_routers_per_level
+        routers_per_level = non_root_routers_per_level
+        terminal_count = params.plane_count * (split**params.levels)
+        root_mode = "full" if params.is_full_root else "half"
+        routers_per_level_by_level = {
+            str(level): (
+                root_routers_per_level
+                if params.is_full_root and level == params.levels - 1
+                else non_root_routers_per_level
+            )
+            for level in range(params.levels)
+        }
         graph = TopologyGraph(
-            name=f"fattree_r{params.radix}_l{params.levels}",
+            name=(
+                f"fattree_fullroot_r{params.radix}_l{params.levels}"
+                if params.is_full_root
+                else f"fattree_r{params.radix}_l{params.levels}"
+            ),
             topology_type=self.name,
             metadata={
                 "radix": params.radix,
                 "levels": params.levels,
                 "split": split,
                 "routers_per_level": routers_per_level,
+                "routers_per_non_root_level": non_root_routers_per_level,
+                "root_routers_per_level": root_routers_per_level,
+                "routers_per_level_by_level": routers_per_level_by_level,
                 "terminal_count": terminal_count,
                 "terminal_attachments": [],
+                "root_mode": root_mode,
+                "plane_count": params.plane_count,
             },
         )
 
         order = 0
         for level in range(params.levels):
-            for coord in _coords(split, params.levels - 1):
-                router = router_id(level, coord)
-                graph.add_node(
-                    Node(
-                        id=router,
-                        kind="router",
-                        metadata={
-                            "level": level,
-                            "coord": list(coord),
-                            "fixed_digits": _fixed_digits(level, coord, params.levels),
-                            "role": _role(level, params.levels),
-                            "booksim_order": order,
-                        },
+            for plane in _planes_for_level(params, level):
+                for coord in _coords(split, coordinate_width):
+                    router = router_id(level, coord, plane=plane)
+                    metadata = {
+                        "level": level,
+                        "coord": list(coord),
+                        "fixed_digits": _fixed_digits(level, coord, params.levels),
+                        "role": _role(level, params.levels),
+                        "booksim_order": order,
+                        "root_mode": root_mode,
+                    }
+                    if plane is not None:
+                        metadata["plane"] = plane
+                    graph.add_node(
+                        Node(
+                            id=router,
+                            kind="router",
+                            metadata=metadata,
+                        )
                     )
-                )
-                order += 1
+                    order += 1
 
         for leaf in sorted(
             (node for node in graph.routers() if node.metadata["level"] == 0),
@@ -108,19 +160,23 @@ class FatTreeTopologyBuilder(TopologyBuilder):
             )
 
         for level in range(params.levels - 1):
-            for lower_coord in _coords(split, params.levels - 1):
-                lower = router_id(level, lower_coord)
-                lower_fixed = _fixed_digits(level, lower_coord, params.levels)
-                for missing_digit in range(split):
-                    full_digits = dict(lower_fixed)
-                    full_digits[level] = missing_digit
-                    upper_coord = _coord_from_full_digits(
-                        excluded_level=level + 1,
-                        full_digits=full_digits,
-                        levels=params.levels,
-                    )
-                    upper = router_id(level + 1, upper_coord)
-                    self._add_fattree_link(graph, links, lower, upper, level)
+            for plane in _planes_for_level(params, level):
+                for lower_coord in _coords(split, coordinate_width):
+                    lower = router_id(level, lower_coord, plane=plane)
+                    lower_fixed = _fixed_digits(level, lower_coord, params.levels)
+                    for missing_digit in range(split):
+                        full_digits = dict(lower_fixed)
+                        full_digits[level] = missing_digit
+                        upper_coord = _coord_from_full_digits(
+                            excluded_level=level + 1,
+                            full_digits=full_digits,
+                            levels=params.levels,
+                        )
+                        upper_plane = (
+                            plane if level + 1 < params.levels - 1 else None
+                        )
+                        upper = router_id(level + 1, upper_coord, plane=upper_plane)
+                        self._add_fattree_link(graph, links, lower, upper, level)
         return graph
 
     @staticmethod
@@ -169,8 +225,15 @@ class FatTreeTopologyBuilder(TopologyBuilder):
         )
 
 
-def router_id(level: int, coord: tuple[int, ...]) -> str:
-    return "ft.l" + str(level) + "." + ".".join(str(value) for value in coord)
+def router_id(level: int, coord: tuple[int, ...], plane: int | None = None) -> str:
+    prefix = "ft" if plane is None else f"ft.p{plane}"
+    return prefix + ".l" + str(level) + "." + ".".join(str(value) for value in coord)
+
+
+def _planes_for_level(params: FatTreeParams, level: int) -> list[int | None]:
+    if params.is_full_root and level < params.levels - 1:
+        return list(range(params.plane_count))
+    return [None]
 
 
 def _coords(split: int, width: int) -> list[tuple[int, ...]]:

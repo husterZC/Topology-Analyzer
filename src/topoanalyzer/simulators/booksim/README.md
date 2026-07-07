@@ -64,7 +64,7 @@ booksim:
 
 Supported values:
 
-- `auto`: choose `stock_fattree` for `fattree_anca`,
+- `auto`: choose `stock_fattree` for canonical `fattree_anca`,
   `anynet_runtime` for BookSim runtime marker routes, otherwise use
   `anynet_table`.
 - `anynet_table`: default custom backend. Emits BookSim `anynet` topology plus a generated route table.
@@ -245,7 +245,8 @@ routing_function = anca;
 ```
 
 This path uses BookSim's runtime adaptive Fat-tree routing function rather than
-the static `anynet.routes` table. It currently requires:
+the static `anynet.routes` table. It models BookSim's canonical half-root
+Fat-tree shape and currently requires:
 
 ```text
 topology.type = fattree
@@ -254,6 +255,10 @@ homogeneous link latency
 latency_cycles == 1
 homogeneous link bandwidth metadata
 ```
+
+For `topology.params.root_mode: full`, use `booksim.backend: auto` or
+`anynet_table`. Native BookSim Fat-tree does not expose this full-root variant,
+so full-root `fattree_anca` is lowered as representative table-driven routes.
 
 Use `anynet_table` for `fattree_nca_hash`, `fattree_dmodk`, and
 `fattree_dmodc`.
